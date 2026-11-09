@@ -21,6 +21,8 @@ class MyQrScreen extends StatefulWidget {
 
 class _MyQrScreenState extends State<MyQrScreen> {
   static const ttl = 60;
+  // Always dark: the QR sits on a white card, in light and dark mode.
+  static const _qrInk = Color(0xFF0E1A2E);
   final _rng = Random.secure();
   late String token;
   int left = ttl;
@@ -30,11 +32,15 @@ class _MyQrScreenState extends State<MyQrScreen> {
   void initState() {
     super.initState();
     _regen();
+    _register();
     _t = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!widget.active) return;
       setState(() {
         left--;
-        if (left <= 0) _regen();
+        if (left <= 0) {
+          _regen();
+          _register();
+        }
       });
     });
   }
@@ -47,6 +53,15 @@ class _MyQrScreenState extends State<MyQrScreen> {
     left = ttl;
   }
 
+  /// Tells the app which code is on screen, so an attendant's scan can be
+  /// verified against it.
+  void _register() {
+    final app = AppScope.read(context);
+    app.registerQr(app.me, token, const Duration(seconds: ttl));
+  }
+
+  bool _celebrating = false;
+
   @override
   void dispose() {
     _t?.cancel();
@@ -57,13 +72,29 @@ class _MyQrScreenState extends State<MyQrScreen> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final me = app.me;
+    // The attendant scanned this code and the charge went through: show it,
+    // then roll a fresh code.
+    final paid = app.qrPaid(token);
+    if (paid && !_celebrating) {
+      _celebrating = true;
+      Future.delayed(const Duration(milliseconds: 2800), () {
+        if (!mounted) return;
+        setState(() {
+          _regen();
+          _register();
+          _celebrating = false;
+        });
+      });
+    }
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       children: [
         const PageTitle(
-          eyebrow: 'Pay',
-          title: 'My QR',
-          subtitle: 'Show this code to the sales attendant to pay.',
+          eyebrow: 'Scan to pay',
+          title: 'Pay',
+          subtitle:
+              'Show this code to the sales attendant. You approve the '
+              'payment on your phone and it comes from your wallet.',
         ),
         const SizedBox(height: 18),
         Container(
@@ -124,21 +155,27 @@ class _MyQrScreenState extends State<MyQrScreen> {
                 ),
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: QrImageView(
-                      key: ValueKey(token),
-                      data: 'ulticharge:pay:${me.id}:$token',
-                      padding: EdgeInsets.zero,
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: UC.ink,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: QrImageView(
+                          key: ValueKey(token),
+                          data: 'ulticharge:pay:${me.id}:$token',
+                          padding: EdgeInsets.zero,
+                          eyeStyle: QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: _qrInk,
+                          ),
+                          dataModuleStyle: QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: _qrInk,
+                          ),
+                        ),
                       ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: UC.ink,
-                      ),
-                    ),
+                      _PaidOverlay(show: paid),
+                    ],
                   ),
                 ),
               ),
@@ -174,15 +211,76 @@ class _MyQrScreenState extends State<MyQrScreen> {
         GhostButton(
           'Regenerate code',
           icon: Icons.refresh_rounded,
-          onPressed: () => setState(_regen),
+          onPressed: () => setState(() {
+            _regen();
+            _register();
+          }),
         ),
         const SizedBox(height: 14),
         const InfoBanner(
-          'Codes rotate every minute and can be used once. Never share a screenshot of your code.',
+          'You always approve before anything is taken. Codes rotate every minute and work once. Never share a screenshot of your code.',
           icon: Icons.shield_outlined,
           tone: Tone.neutral,
         ),
       ],
+    );
+  }
+}
+
+/// The pay QR as its own page (opened from the Home "Pay" shortcut).
+class QrPage extends StatelessWidget {
+  const QrPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Pay')),
+    body: const MyQrScreen(active: true),
+  );
+}
+
+/// "Paid" confirmation that pops over the QR once an attendant has scanned it.
+class _PaidOverlay extends StatelessWidget {
+  final bool show;
+  const _PaidOverlay({required this.show});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      ignoring: !show,
+      child: AnimatedOpacity(
+        opacity: show ? 1 : 0,
+        duration: const Duration(milliseconds: 260),
+        child: Container(
+          decoration: BoxDecoration(
+            color: UC.success.withValues(alpha: .96),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedScale(
+                scale: show ? 1 : .4,
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.elasticOut,
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 76,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Payment received',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

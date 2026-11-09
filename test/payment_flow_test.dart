@@ -23,8 +23,9 @@ ChargeSession billedSession(AppState app, {double amount = 24}) {
 }
 
 void main() {
-  test('sales accept only card and MoMo', () {
+  test('sales accept driver QR, card and MoMo', () {
     expect(PaymentRules.methodsFor(PaymentParty.sales), [
+      PayMethod.wallet,
       PayMethod.card,
       PayMethod.momo,
     ]);

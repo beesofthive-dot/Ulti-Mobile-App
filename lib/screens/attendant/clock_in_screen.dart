@@ -46,8 +46,8 @@ class _ClockInScreenState extends State<ClockInScreen> {
         actions: [
           TextButton.icon(
             onPressed: app.signOut,
-            icon: const Icon(Icons.logout_rounded, size: 18, color: UC.muted),
-            label: const Text('Log out', style: TextStyle(color: UC.muted)),
+            icon: Icon(Icons.logout_rounded, size: 18, color: UC.muted),
+            label: Text('Log out', style: TextStyle(color: UC.muted)),
           ),
         ],
       ),
@@ -135,7 +135,7 @@ class _ClockInScreenState extends State<ClockInScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Terminal, shift times and the opening reading are set by your '
             'supervisor. You do not need to enter anything.',
             style: TextStyle(fontSize: 12, color: UC.muted),

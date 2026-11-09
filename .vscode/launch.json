@@ -1,0 +1,6 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "Ulti (Chrome)", "request": "launch", "type": "dart", "deviceId": "chrome", "args": ["--web-port=5173"], "program": "lib/main.dart" }
+  ]
+}

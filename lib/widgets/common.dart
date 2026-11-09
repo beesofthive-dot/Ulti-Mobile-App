@@ -11,8 +11,8 @@ export '../notifications/app_notification.dart' show Tone;
 /// Small uppercase, letter-spaced label ("WELCOME BACK", "NEAR YOU").
 class Eyebrow extends StatelessWidget {
   final String text;
-  final Color color;
-  const Eyebrow(this.text, {super.key, this.color = UC.muted});
+  final Color? color;
+  const Eyebrow(this.text, {super.key, this.color});
 
   @override
   Widget build(BuildContext context) => Text(
@@ -21,7 +21,7 @@ class Eyebrow extends StatelessWidget {
       fontSize: 11,
       letterSpacing: 1.8,
       fontWeight: FontWeight.w600,
-      color: color,
+      color: color ?? UC.muted,
     ),
   );
 }
@@ -44,7 +44,9 @@ class UcLogo extends StatelessWidget {
       );
     }
     return Image.asset(
-      'assets/brand/logo_full.png',
+      UC.dark
+          ? 'assets/brand/logo_full_light.png'
+          : 'assets/brand/logo_full.png',
       height: size,
       filterQuality: FilterQuality.medium,
     );
@@ -70,7 +72,7 @@ class PrimaryButton extends StatelessWidget {
   final IconData? trailing;
   final IconData? leading;
   final bool busy;
-  final Color color;
+  final Color? color;
   final double height;
   const PrimaryButton(
     this.label, {
@@ -79,21 +81,25 @@ class PrimaryButton extends StatelessWidget {
     this.trailing = Icons.chevron_right_rounded,
     this.leading,
     this.busy = false,
-    this.color = UC.primary,
+    this.color,
     this.height = 54,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Default: navy fill / white text in light mode, teal fill / navy text
+    // in dark mode. An explicit colour (e.g. danger) keeps white text.
+    final fill = color ?? UC.accent;
+    final fg = color == null ? UC.onAccent : Colors.white;
     return SizedBox(
       width: double.infinity,
       height: height,
       child: FilledButton(
         style: FilledButton.styleFrom(
-          backgroundColor: color,
-          disabledBackgroundColor: color.withValues(alpha: .35),
-          foregroundColor: Colors.white,
-          disabledForegroundColor: Colors.white70,
+          backgroundColor: fill,
+          disabledBackgroundColor: fill.withValues(alpha: .35),
+          foregroundColor: fg,
+          disabledForegroundColor: fg.withValues(alpha: .7),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -101,13 +107,10 @@ class PrimaryButton extends StatelessWidget {
         ),
         onPressed: busy ? null : onPressed,
         child: busy
-            ? const SizedBox(
+            ? SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  color: Colors.white,
-                ),
+                child: CircularProgressIndicator(strokeWidth: 2.4, color: fg),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -132,24 +135,25 @@ class GhostButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
-  final Color color;
+  final Color? color;
   const GhostButton(
     this.label, {
     super.key,
     this.onPressed,
     this.icon,
-    this.color = UC.ink,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = this.color ?? UC.ink;
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
           foregroundColor: color,
-          side: BorderSide(color: color == UC.ink ? UC.line : color),
+          side: BorderSide(color: this.color == null ? UC.line : color),
           backgroundColor: UC.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -188,6 +192,9 @@ class LabeledField extends StatelessWidget {
   final int maxLines;
   final bool optional;
   final bool readOnly;
+
+  /// Large type for the main figure on a screen (e.g. kWh to record).
+  final bool big;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
   final Widget? suffix;
@@ -208,6 +215,7 @@ class LabeledField extends StatelessWidget {
     this.maxLines = 1,
     this.optional = false,
     this.readOnly = false,
+    this.big = false,
     this.onChanged,
     this.onTap,
     this.suffix,
@@ -220,20 +228,29 @@ class LabeledField extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: UC.ink,
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: UC.ink,
+                      ),
+                    ),
+                  ),
+                  if (optional)
+                    Text(
+                      '  Optional',
+                      style: TextStyle(fontSize: 11.5, color: UC.faint),
+                    ),
+                ],
               ),
             ),
-            if (optional)
-              const Text(
-                '  Optional',
-                style: TextStyle(fontSize: 11.5, color: UC.faint),
-              ),
-            const Spacer(),
             ?labelTrailing,
           ],
         ),
@@ -249,8 +266,17 @@ class LabeledField extends StatelessWidget {
           readOnly: readOnly,
           onChanged: onChanged,
           onTap: onTap,
-          style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500),
+          style: big
+              ? const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .2,
+                )
+              : const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
+            contentPadding: big
+                ? const EdgeInsets.symmetric(horizontal: 14, vertical: 20)
+                : null,
             hintText: hint,
             errorText: errorText,
             suffixText: suffixText,
@@ -263,10 +289,7 @@ class LabeledField extends StatelessWidget {
         ),
         if (helper != null) ...[
           const SizedBox(height: 6),
-          Text(
-            helper!,
-            style: const TextStyle(fontSize: 11.5, color: UC.muted),
-          ),
+          Text(helper!, style: TextStyle(fontSize: 11.5, color: UC.muted)),
         ],
       ],
     );
@@ -317,15 +340,15 @@ class StatusChip extends StatelessWidget {
 class Panel extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
-  final Color color;
+  final Color? color;
   final VoidCallback? onTap;
-  final Color borderColor;
+  final Color? borderColor;
   const Panel({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.color = UC.surface,
-    this.borderColor = UC.line,
+    this.color,
+    this.borderColor,
     this.onTap,
   });
 
@@ -336,17 +359,17 @@ class Panel extends StatelessWidget {
         borderRadius: BorderRadius.circular(UC.radius),
         boxShadow: [
           BoxShadow(
-            color: UC.navy.withValues(alpha: .05),
+            color: UC.navy.withValues(alpha: UC.dark ? .35 : .05),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Material(
-        color: color,
+        color: color ?? UC.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(UC.radius),
-          side: BorderSide(color: borderColor),
+          side: BorderSide(color: borderColor ?? UC.line),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -403,10 +426,10 @@ class SectionHeader extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.w800,
-                    color: UC.navy,
+                    color: UC.title,
                     letterSpacing: -.3,
                   ),
                 ),
@@ -426,16 +449,16 @@ class SectionHeader extends StatelessWidget {
                     children: [
                       Text(
                         action!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0B8F80),
+                          color: UC.tealText,
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right_rounded,
                         size: 18,
-                        color: Color(0xFF0B8F80),
+                        color: UC.tealText,
                       ),
                     ],
                   ),
@@ -485,11 +508,7 @@ class InfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: UC.ink,
-              ),
+              style: TextStyle(fontSize: 12.5, height: 1.4, color: UC.ink),
             ),
           ),
           if (action != null) ...[const SizedBox(width: 8), action!],
@@ -513,7 +532,7 @@ class KV extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(k, style: const TextStyle(fontSize: 13, color: UC.muted)),
+          Text(k, style: TextStyle(fontSize: 13, color: UC.muted)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -556,12 +575,12 @@ class StatusPanel extends StatelessWidget {
               children: [
                 Text(
                   info.explanation,
-                  style: const TextStyle(fontSize: 12, color: UC.ink),
+                  style: TextStyle(fontSize: 12, color: UC.ink),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '${stamp(at)} · Next: ${info.nextAction}',
-                  style: const TextStyle(fontSize: 11, color: UC.muted),
+                  style: TextStyle(fontSize: 11, color: UC.muted),
                 ),
               ],
             ),
@@ -627,7 +646,7 @@ class ChoiceCard extends StatelessWidget {
           color: selected ? UC.limeSoft : UC.surface,
           borderRadius: radius,
           border: Border.all(
-            color: selected ? UC.navy : UC.line,
+            color: selected ? UC.accent : UC.line,
             width: selected ? 1.6 : 1,
           ),
           boxShadow: selected
@@ -653,7 +672,7 @@ class ChoiceCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
               child: Row(
                 children: [
-                  Icon(icon, size: 19, color: selected ? UC.navy : UC.muted),
+                  Icon(icon, size: 19, color: selected ? UC.accent : UC.muted),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -673,10 +692,7 @@ class ChoiceCard extends StatelessWidget {
                             subtitle!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: UC.muted,
-                            ),
+                            style: TextStyle(fontSize: 11, color: UC.muted),
                           ),
                       ],
                     ),
@@ -685,12 +701,12 @@ class ChoiceCard extends StatelessWidget {
                     scale: selected ? 1 : 0,
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOutBack,
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.only(left: 6),
                       child: Icon(
                         Icons.check_circle_rounded,
                         size: 18,
-                        color: UC.navy,
+                        color: UC.accent,
                       ),
                     ),
                   ),
@@ -709,7 +725,7 @@ Future<bool> confirmDialog(
   required String title,
   required Widget body,
   String confirm = 'Confirm',
-  Color color = UC.primary,
+  Color? color,
 }) async {
   final r = await showDialog<bool>(
     context: context,
@@ -724,10 +740,13 @@ Future<bool> confirmDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(c, false),
-          child: const Text('Back', style: TextStyle(color: UC.muted)),
+          child: Text('Back', style: TextStyle(color: UC.muted)),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: color),
+          style: FilledButton.styleFrom(
+            backgroundColor: color ?? UC.accent,
+            foregroundColor: color == null ? UC.onAccent : Colors.white,
+          ),
           onPressed: () => Navigator.pop(c, true),
           child: Text(confirm),
         ),
@@ -767,7 +786,7 @@ Future<String?> reasonDialog(
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(c),
-              child: const Text('Cancel', style: TextStyle(color: UC.muted)),
+              child: Text('Cancel', style: TextStyle(color: UC.muted)),
             ),
             FilledButton(
               onPressed: ctl.text.trim().length < 5
@@ -809,7 +828,7 @@ class EmptyState extends StatelessWidget {
           Text(
             body,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12.5, color: UC.muted),
+            style: TextStyle(fontSize: 12.5, color: UC.muted),
           ),
         ],
       ),
@@ -853,7 +872,7 @@ class SmallLink extends StatelessWidget {
                 style: TextStyle(
                   fontSize: bold ? 12.5 : 12,
                   fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-                  color: bold ? UC.navy : UC.muted,
+                  color: bold ? UC.accent : UC.muted,
                 ),
               ),
             ],
@@ -893,6 +912,143 @@ class InsetTile extends StatelessWidget {
         trailing: trailing,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+      ),
+    );
+  }
+}
+
+/// "Dark mode" switch row for settings lists and the account sheet.
+class DarkModeTile extends StatelessWidget {
+  const DarkModeTile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return InsetTile(
+      onTap: () => UC.setDark(!UC.dark),
+      leading: IconTile(
+        UC.dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+        UC.accent,
+        size: 36,
+      ),
+      title: const Text(
+        'Dark mode',
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        UC.dark ? 'On · easy on the eyes' : 'Off',
+        style: TextStyle(fontSize: 12, color: UC.muted),
+      ),
+      trailing: Switch(value: UC.dark, onChanged: UC.setDark),
+    );
+  }
+}
+
+/// Small round light / dark toggle for screens without a settings list.
+class ThemeIconButton extends StatelessWidget {
+  const ThemeIconButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: UC.dark ? 'Switch to light mode' : 'Switch to dark mode',
+      child: Material(
+        color: UC.surface,
+        shape: CircleBorder(side: BorderSide(color: UC.line)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => UC.setDark(!UC.dark),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              transitionBuilder: (c, a) => RotationTransition(
+                turns: Tween(begin: .75, end: 1.0).animate(a),
+                child: FadeTransition(opacity: a, child: c),
+              ),
+              child: Icon(
+                UC.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                key: ValueKey(UC.dark),
+                size: 20,
+                color: UC.accent,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dashboard stat tile: tinted icon, an accent bar, an animated figure and a
+/// label. Shared by the attendant and driver dashboards.
+class StatTile extends StatelessWidget {
+  final String label;
+  final double value;
+  final String Function(double) format;
+  final IconData icon;
+  final Color tint;
+  final int index;
+  const StatTile(
+    this.label,
+    this.value,
+    this.format,
+    this.icon,
+    this.tint,
+    this.index, {
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeSlideIn(
+      index: index + 1,
+      child: Panel(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                IconTile(icon, tint, size: 32),
+                const Spacer(),
+                Container(
+                  width: 18,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: tint.withValues(alpha: .35),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Scales down rather than overflowing on a big figure.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: CountUp(
+                    value,
+                    format: format,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: UC.title,
+                    ),
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11.5, color: UC.muted),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

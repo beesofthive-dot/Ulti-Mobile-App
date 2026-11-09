@@ -46,10 +46,10 @@ class _DriversTabState extends State<DriversTab> {
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
             hintText: 'Phone, card ID, driver ID or plate',
-            prefixIcon: const Icon(Icons.search_rounded, color: UC.faint),
+            prefixIcon: Icon(Icons.search_rounded, color: UC.faint),
             suffixIcon: IconButton(
               tooltip: 'Scan driver QR',
-              icon: const Icon(Icons.qr_code_scanner_rounded, color: UC.muted),
+              icon: Icon(Icons.qr_code_scanner_rounded, color: UC.muted),
               onPressed: () => toast(
                 context,
                 'Camera scanning connects here — type the card ID for now',
@@ -73,7 +73,7 @@ class _DriversTabState extends State<DriversTab> {
         const SizedBox(height: 18),
         Text(
           '${results.length} result${results.length == 1 ? '' : 's'}',
-          style: const TextStyle(fontSize: 12, color: UC.muted),
+          style: TextStyle(fontSize: 12, color: UC.muted),
         ),
         const SizedBox(height: 8),
         if (results.isEmpty)
@@ -118,17 +118,11 @@ class _DriversTabState extends State<DriversTab> {
                         const SizedBox(height: 2),
                         Text(
                           '${d.phone} · ${d.plate}',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: UC.muted,
-                          ),
+                          style: TextStyle(fontSize: 11.5, color: UC.muted),
                         ),
                         Text(
                           '${d.vehicleType} · ${d.cardId ?? 'No card'}',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: UC.muted,
-                          ),
+                          style: TextStyle(fontSize: 11.5, color: UC.muted),
                         ),
                       ],
                     ),
@@ -258,7 +252,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
                   showCheckmark: false,
                   selectedColor: UC.limeSoft,
                   backgroundColor: UC.surface,
-                  side: BorderSide(color: type == t ? UC.primary : UC.line),
+                  side: BorderSide(color: type == t ? UC.accent : UC.line),
                   labelStyle: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,

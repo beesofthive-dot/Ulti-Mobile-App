@@ -35,7 +35,7 @@ class StatusInfo {
 }
 
 StatusInfo sessionInfo(SessionStatus s) => switch (s) {
-  SessionStatus.draft => const StatusInfo(
+  SessionStatus.draft => StatusInfo(
     'Draft',
     UC.muted,
     'Saved on this device, not yet started.',
@@ -71,7 +71,7 @@ StatusInfo sessionInfo(SessionStatus s) => switch (s) {
     'Needs supervisor review before final closure.',
     'Await supervisor',
   ),
-  SessionStatus.voided => const StatusInfo(
+  SessionStatus.voided => StatusInfo(
     'Voided',
     UC.faint,
     'Voided by manager. Event trail retained.',
@@ -80,7 +80,7 @@ StatusInfo sessionInfo(SessionStatus s) => switch (s) {
 };
 
 StatusInfo paymentInfo(PaymentStatus s) => switch (s) {
-  PaymentStatus.initiated => const StatusInfo(
+  PaymentStatus.initiated => StatusInfo(
     'Initiated',
     UC.muted,
     'Request created.',
@@ -131,13 +131,13 @@ StatusInfo branchInfo(BranchStatus s) => switch (s) {
     'Staff report chargers unavailable.',
     'Try another branch',
   ),
-  BranchStatus.temporarilyClosed => const StatusInfo(
+  BranchStatus.temporarilyClosed => StatusInfo(
     'Temporarily closed',
     UC.muted,
     'Branch closed for now.',
     'Call branch',
   ),
-  BranchStatus.unknown => const StatusInfo(
+  BranchStatus.unknown => StatusInfo(
     'Unknown',
     UC.faint,
     'No recent staff update.',
@@ -146,7 +146,7 @@ StatusInfo branchInfo(BranchStatus s) => switch (s) {
 };
 
 StatusInfo cardInfo(CardStatus s) => switch (s) {
-  CardStatus.unlinked => const StatusInfo(
+  CardStatus.unlinked => StatusInfo(
     'Unlinked',
     UC.muted,
     'Not linked to an account.',
@@ -170,7 +170,7 @@ StatusInfo cardInfo(CardStatus s) => switch (s) {
     'Superseded by a new card.',
     '—',
   ),
-  CardStatus.expired => const StatusInfo(
+  CardStatus.expired => StatusInfo(
     'Expired',
     UC.faint,
     'Card validity ended.',
@@ -179,7 +179,7 @@ StatusInfo cardInfo(CardStatus s) => switch (s) {
 };
 
 StatusInfo shiftInfo(ShiftStatus s) => switch (s) {
-  ShiftStatus.notStarted => const StatusInfo(
+  ShiftStatus.notStarted => StatusInfo(
     'Not started',
     UC.muted,
     'Clock in to begin.',
@@ -222,7 +222,8 @@ String payMethodLabel(PayMethod m) => switch (m) {
 /// An attendant's terminal (branch + charger) is assigned by the back office.
 class Account {
   final String phone;
-  final String password;
+  String? email;
+  String password;
   final Role role;
   final String name;
   final Driver? driver;
@@ -234,6 +235,7 @@ class Account {
   double? openingReading;
   Account({
     required this.phone,
+    this.email,
     required this.password,
     required this.role,
     required this.name,

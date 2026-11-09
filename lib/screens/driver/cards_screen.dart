@@ -138,7 +138,7 @@ class _CardTile extends StatelessWidget {
                   : OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: UC.ink,
-                        side: const BorderSide(color: UC.line),
+                        side: BorderSide(color: UC.line),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),

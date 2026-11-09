@@ -21,7 +21,7 @@ void main() {
         .widgetList<NavigationDestination>(find.byType(NavigationDestination))
         .map((d) => d.label)
         .toList();
-    expect(labels, ['Home', 'Pay', 'History', 'Profile']);
+    expect(labels, ['Home', 'Alerts', 'History', 'Profile']);
 
     await tester.tap(find.text('Find stations'));
     await tester.pump();

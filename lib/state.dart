@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/widgets.dart';
 
+import 'auth/otp_flow.dart';
 import 'models.dart';
 import 'notifications/app_notification.dart';
 import 'notifications/notification_feed.dart';
@@ -12,7 +13,7 @@ import 'payments/wallet_flow.dart';
 /// In-memory app state with seed data. No backend: the spec excludes it.
 /// Start/Stop only record software timestamps; nothing talks to a charger.
 class AppState extends ChangeNotifier
-    with NotificationFeed, PaymentFlow, WalletFlow {
+    with NotificationFeed, PaymentFlow, WalletFlow, OtpFlow {
   AppState() {
     _seed();
   }
@@ -33,7 +34,11 @@ class AppState extends ChangeNotifier
   final List<String> redemptions = ['12 Oct · Free 5 kWh top-up · −250 pts'];
 
   // ---------- accounts ----------
+  @override
   final List<Account> accounts = [];
+
+  @override
+  String normalizePhone(String phone) => localPhone(phone);
   Account? account;
 
   // ---------- attendant ----------
@@ -171,6 +176,7 @@ class AppState extends ChangeNotifier
     accounts.addAll([
       Account(
         phone: '020 000 0001',
+        email: 'efua.asante@ulticharge.com',
         password: 'attend123',
         role: Role.attendant,
         name: 'Efua Asante',
@@ -182,6 +188,7 @@ class AppState extends ChangeNotifier
       ),
       Account(
         phone: '020 000 0002',
+        email: 'kofi.annan@ulticharge.com',
         password: 'attend123',
         role: Role.attendant,
         name: 'Kofi Annan',
@@ -193,12 +200,14 @@ class AppState extends ChangeNotifier
       ),
       Account(
         phone: '020 000 0003',
+        email: 'esi.quaye@ulticharge.com',
         password: 'attend123',
         role: Role.attendant,
         name: 'Esi Quaye',
       ),
       Account(
         phone: me.phone,
+        email: 'kwame.mensah@example.com',
         password: 'driver123',
         role: Role.driver,
         name: me.name,
@@ -397,6 +406,15 @@ class AppState extends ChangeNotifier
     };
   }
 
+  /// Phone of the attendant who recorded [s] (their account), so their
+  /// notices reach them whichever role is signed in when the event happens.
+  String? _attendantPhone(ChargeSession s) {
+    for (final a in accounts) {
+      if (a.role == Role.attendant && a.name == s.attendant) return a.phone;
+    }
+    return account?.phone;
+  }
+
   /// Money event on [s]: told to the attendant who handled it and to the
   /// driver who paid, each in their own words.
   @override
@@ -407,6 +425,8 @@ class AppState extends ChangeNotifier
     required String driverTitle,
     required String detail,
   }) {
+    // Addressed to the attendant who handled the charge, not to whoever is
+    // signed in now: a driver's approval arrives while the driver is.
     notify(
       AppNotification(
         title: attendantTitle,
@@ -414,7 +434,7 @@ class AppState extends ChangeNotifier
         tone: tone,
         category: NoteCategory.money,
         audience: Role.attendant,
-        phone: account?.phone,
+        phone: _attendantPhone(s),
       ),
     );
     notify(
@@ -432,6 +452,17 @@ class AppState extends ChangeNotifier
   // ================= auth =================
   static String digits(String phone) => phone.replaceAll(RegExp(r'\D'), '');
 
+  static bool isEmail(String s) =>
+      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s.trim());
+
+  /// Phone numbers become 0XXXXXXXXX; emails are trimmed and lower-cased.
+  static String normalizeId(String s) =>
+      s.contains('@') ? s.trim().toLowerCase() : localPhone(s);
+
+  /// A sign-in identifier that is a valid email or a 10-digit phone number.
+  static bool validId(String s) =>
+      s.contains('@') ? isEmail(s) : localPhone(s).length == 10;
+
   /// Normalises a Ghana mobile number to local form (0XXXXXXXXX), so
   /// "+233 20 000 0001", "233200000001", "20 000 0001" and "020 000 0001"
   /// all match the same account.
@@ -443,16 +474,13 @@ class AppState extends ChangeNotifier
   }
 
   /// The account decides the workspace: attendant or driver.
-  Account? authenticate(String phone, String password) {
-    final p = localPhone(phone);
-    final pw = password.trim();
-    for (final a in accounts) {
-      if (localPhone(a.phone) == p && a.password == pw) return a;
-    }
-    return null;
+  /// Signs in with a phone number or an email address plus the password.
+  Account? authenticate(String identifier, String password) {
+    final a = accountForId(identifier);
+    return (a != null && a.password == password.trim()) ? a : null;
   }
 
-  void signIn(Account a) {
+  void signIn(Account a, {bool viaCode = false}) {
     account = a;
     role = a.role;
     if (a.role == Role.driver) {
@@ -460,6 +488,20 @@ class AppState extends ChangeNotifier
     } else if (a.role == Role.attendant) {
       attendantName = a.name;
       branch = shift.status == ShiftStatus.active ? shift.branch : branchOf(a);
+    }
+    if (viaCode) {
+      notify(
+        AppNotification(
+          title: 'Signed in with a one-time code',
+          body: 'If this was not you, reset your password right away.',
+          tone: Tone.info,
+          category: NoteCategory.system,
+          audience: a.role,
+          driver: a.driver,
+          phone: a.phone,
+        ),
+      );
+      return;
     }
     notifyListeners();
   }
@@ -497,11 +539,15 @@ class AppState extends ChangeNotifier
     String phone,
     String plate,
     String vehicleType,
-    String password,
-  ) {
+    String password, {
+    String? email,
+  }) {
     final d = registerDriver(name, phone, plate, vehicleType);
     final a = Account(
       phone: phone,
+      email: (email == null || email.trim().isEmpty)
+          ? null
+          : email.trim().toLowerCase(),
       password: password,
       role: Role.driver,
       name: name,
@@ -690,8 +736,94 @@ class AppState extends ChangeNotifier
     );
     if (!online) s.events.add(SessionEvent('Saved locally — UNSYNCED'));
     sessions.add(s);
-    notifyListeners();
+    _chargeNote(
+      s,
+      driverTitle: 'Charging started',
+      driverBody:
+          '${s.charger.id} at ${b.name}. You will be told the amount when it ends.',
+      attendantTitle: 'Charge started',
+      attendantBody: '${driver.name} on ${s.charger.id}.',
+    );
     return s;
+  }
+
+  /// Records a finished charge in one step (kWh and amount already worked out
+  /// at the tariff) and leaves it awaiting payment. The driver is told the
+  /// amount due and the attendant that it was recorded.
+  ChargeSession recordCharge({
+    required Driver driver,
+    required Charger charger,
+    required double kwh,
+    required double amount,
+  }) {
+    final b = branch!;
+    final s = ChargeSession(
+      id: _sessionId(),
+      driver: driver,
+      branch: b,
+      charger: charger,
+      tariff: b.tariff,
+      attendant: attendantName,
+      startedAt: DateTime.now(),
+      idempotencyKey: _key(),
+      synced: online,
+    );
+    s.events.add(SessionEvent('Charge recorded'));
+    if (!online) s.events.add(SessionEvent('Saved locally — UNSYNCED'));
+    sessions.add(s);
+    // Stops it, stores the readings and tells the driver what is due.
+    recordReadings(
+      s,
+      kwh: kwh,
+      amount: amount,
+      photo: false,
+      notes: '',
+      varianceReason: '',
+    );
+    notify(
+      AppNotification(
+        title: 'Charge recorded',
+        body:
+            '${s.id} · ${charger.id} · ${kwh.toStringAsFixed(3)} kWh · '
+            '${money(amount)} to collect from ${driver.name}.',
+        tone: Tone.success,
+        category: NoteCategory.session,
+        audience: Role.attendant,
+        phone: account?.phone,
+      ),
+    );
+    return s;
+  }
+
+  /// A charge-session event, told to the driver and to the attendant.
+  void _chargeNote(
+    ChargeSession s, {
+    required String driverTitle,
+    required String driverBody,
+    required String attendantTitle,
+    required String attendantBody,
+    Tone tone = Tone.info,
+  }) {
+    notify(
+      AppNotification(
+        title: attendantTitle,
+        body: attendantBody,
+        tone: tone,
+        category: NoteCategory.session,
+        audience: Role.attendant,
+        phone: _attendantPhone(s),
+      ),
+    );
+    notify(
+      AppNotification(
+        title: driverTitle,
+        body: driverBody,
+        tone: tone,
+        category: NoteCategory.session,
+        audience: Role.driver,
+        driver: s.driver,
+      ),
+    );
   }
 
   void stopSession(ChargeSession s) {
@@ -724,6 +856,18 @@ class AppState extends ChangeNotifier
     s.events.add(
       SessionEvent(
         'Readings confirmed: ${kwh.toStringAsFixed(2)} kWh, ${money(amount)}',
+      ),
+    );
+    notify(
+      AppNotification(
+        title: 'Charge complete · ${money(s.due)} due',
+        body:
+            '${kwh.toStringAsFixed(2)} kWh at ${s.branch.name}. Show your QR '
+            'or approve the Mobile Money prompt to pay.',
+        tone: Tone.warning,
+        category: NoteCategory.money,
+        audience: Role.driver,
+        driver: s.driver,
       ),
     );
     if (s.varianceFlag) {

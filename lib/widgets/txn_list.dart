@@ -66,7 +66,7 @@ class TransactionRow extends StatelessWidget {
     final info = transactionInfo(s);
     final done = s.status == SessionStatus.paid;
     final tint = done ? UC.info : UC.warning;
-    const text = TextStyle(fontSize: 14, height: 1.35, color: UC.ink);
+    final text = TextStyle(fontSize: 14, height: 1.35, color: UC.ink);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
       child: Row(
@@ -85,7 +85,7 @@ class TransactionRow extends StatelessWidget {
           IconButton(
             tooltip: 'Driver details',
             onPressed: () => _showPerson(context, s),
-            icon: const Icon(Icons.person_outline_rounded, color: UC.ink),
+            icon: Icon(Icons.person_outline_rounded, color: UC.ink),
           ),
         ],
       ),
@@ -205,7 +205,7 @@ class _Pager extends StatelessWidget {
         children: [
           Text(
             'Page ${page + 1}\nof $pages',
-            style: const TextStyle(fontSize: 13.5, color: UC.muted),
+            style: TextStyle(fontSize: 13.5, color: UC.muted),
           ),
           const SizedBox(width: 8),
           _PageButton(

@@ -63,7 +63,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         TextField(
           controller: q,
           onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Search station or session ID',
             prefixIcon: Icon(Icons.search_rounded, color: UC.faint),
           ),
@@ -77,13 +77,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 label: Text(l),
                 selected: days == d,
                 showCheckmark: false,
-                selectedColor: UC.primary,
+                selectedColor: UC.accent,
                 backgroundColor: UC.surface,
                 labelStyle: TextStyle(
-                  color: days == d ? Colors.white : UC.ink,
+                  color: days == d ? UC.onAccent : UC.ink,
                   fontWeight: FontWeight.w600,
                 ),
-                side: BorderSide(color: days == d ? UC.primary : UC.line),
+                side: BorderSide(color: days == d ? UC.accent : UC.line),
                 onSelected: (_) => setState(() => days = d),
               ),
           ],
@@ -133,7 +133,7 @@ class _Mini extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: UC.muted)),
+        Text(label, style: TextStyle(fontSize: 11, color: UC.muted)),
         const SizedBox(height: 4),
         FittedBox(
           child: Text(
@@ -170,7 +170,7 @@ class HistoryRow extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              const IconTile(Icons.bolt_rounded, UC.primary, size: 38),
+              IconTile(Icons.bolt_rounded, UC.accent, size: 38),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -186,7 +186,7 @@ class HistoryRow extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${(s.kwh ?? 0).toStringAsFixed(1)} kWh · ${dm(s.startedAt)}, ${hm(s.startedAt)}',
-                      style: const TextStyle(fontSize: 11.5, color: UC.muted),
+                      style: TextStyle(fontSize: 11.5, color: UC.muted),
                     ),
                   ],
                 ),

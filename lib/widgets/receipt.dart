@@ -180,7 +180,7 @@ class EventTrail extends StatelessWidget {
                   ),
                   Text(
                     hm(e.at),
-                    style: const TextStyle(fontSize: 11.5, color: UC.muted),
+                    style: TextStyle(fontSize: 11.5, color: UC.muted),
                   ),
                 ],
               ),

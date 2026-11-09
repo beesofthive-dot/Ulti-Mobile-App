@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/motion.dart';
 
 /// Landing / loading screen: the main logo pops in, the tagline fades up,
 /// and a teal bar fills while the app gets ready.
@@ -57,74 +58,79 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: UC.surface,
-      body: SafeArea(
-        child: AnimatedBuilder(
-          animation: c,
-          builder: (context, _) => Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              const SizedBox(width: double.infinity),
-              const Spacer(flex: 3),
-              Opacity(
-                opacity: logoFade.value,
-                child: Transform.scale(
-                  scale: logoScale.value,
-                  child: const BrandLogo(height: 150),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Opacity(
-                opacity: tagFade.value,
-                child: Transform.translate(
-                  offset: Offset(0, 10 * (1 - tagFade.value)),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Ulti Charge',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: UC.navy,
-                          letterSpacing: -.4,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Your Power, Partner...',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2.2,
-                          color: UC.brandGreen.withValues(alpha: .95),
-                        ),
-                      ),
-                    ],
+      body: Stack(
+        children: [
+          const BrandRings(),
+          SafeArea(
+            child: AnimatedBuilder(
+              animation: c,
+              builder: (context, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  const SizedBox(width: double.infinity),
+                  const Spacer(flex: 3),
+                  Opacity(
+                    opacity: logoFade.value,
+                    child: Transform.scale(
+                      scale: logoScale.value,
+                      child: const BrandLogo(height: 150),
+                    ),
                   ),
-                ),
-              ),
-              const Spacer(flex: 3),
-              SizedBox(
-                width: 140,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress.value,
-                    minHeight: 4,
-                    color: UC.teal,
-                    backgroundColor: UC.line,
+                  const SizedBox(height: 22),
+                  Opacity(
+                    opacity: tagFade.value,
+                    child: Transform.translate(
+                      offset: Offset(0, 10 * (1 - tagFade.value)),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Ulti Charge',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: UC.title,
+                              letterSpacing: -.4,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Your Power, Partner...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.2,
+                              color: UC.brandGreen.withValues(alpha: .95),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  const Spacer(flex: 3),
+                  SizedBox(
+                    width: 140,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress.value,
+                        minHeight: 4,
+                        color: UC.teal,
+                        backgroundColor: UC.line,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Loading…',
+                    style: TextStyle(fontSize: 12, color: UC.muted),
+                  ),
+                  const Spacer(),
+                ],
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Loading…',
-                style: TextStyle(fontSize: 12, color: UC.muted),
-              ),
-              const Spacer(),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

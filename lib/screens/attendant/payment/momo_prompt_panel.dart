@@ -22,7 +22,8 @@ class MomoPromptPanel extends StatefulWidget {
 
 class _MomoPromptPanelState extends State<MomoPromptPanel> {
   late final number = TextEditingController(text: widget.s.driver.phone);
-  MomoOutcome demo = MomoOutcome.approve; // demo only
+  // Who answers the prompt. By default the real driver, in their own app.
+  MomoOutcome demo = MomoOutcome.driver;
   String? numberErr;
   Timer? _tick;
 
@@ -87,8 +88,8 @@ class _MomoPromptPanelState extends State<MomoPromptPanel> {
           ),
         ],
         const SizedBox(height: 16),
-        const Text(
-          'Demo: driver response',
+        Text(
+          'Who answers the prompt?',
           style: TextStyle(fontSize: 12, color: UC.muted),
         ),
         const SizedBox(height: 6),
@@ -96,9 +97,9 @@ class _MomoPromptPanelState extends State<MomoPromptPanel> {
           spacing: 8,
           children: [
             for (final (o, label) in const [
-              (MomoOutcome.approve, 'Approves'),
-              (MomoOutcome.decline, 'Declines'),
-              (MomoOutcome.noResponse, 'No response'),
+              (MomoOutcome.driver, 'Driver, in their app'),
+              (MomoOutcome.approve, 'Demo: auto-approve'),
+              (MomoOutcome.decline, 'Demo: auto-decline'),
             ])
               ChoiceChip(
                 label: Text(label),
@@ -162,13 +163,9 @@ class _MomoPromptPanelState extends State<MomoPromptPanel> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Ask ${s.driver.name.split(' ').first} to approve ${money(s.due)} on ${s.momoNumber} with their MoMo PIN.',
+                '${s.driver.name.split(' ').first} gets the request in the Ulti Charge app (and on ${s.momoNumber}) and approves ${money(s.due)} with their MoMo PIN.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  height: 1.4,
-                  color: UC.muted,
-                ),
+                style: TextStyle(fontSize: 12.5, height: 1.4, color: UC.muted),
               ),
               const SizedBox(height: 18),
               const _Step('Prompt sent', done: true),
@@ -212,12 +209,14 @@ class _Step extends StatelessWidget {
             color: color,
           ),
           const SizedBox(width: 10),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-              color: done || active ? UC.ink : UC.muted,
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                color: done || active ? UC.ink : UC.muted,
+              ),
             ),
           ),
         ],

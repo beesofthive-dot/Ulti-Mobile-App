@@ -18,8 +18,8 @@ class AwaitingAssignmentScreen extends StatelessWidget {
         actions: [
           TextButton.icon(
             onPressed: app.signOut,
-            icon: const Icon(Icons.logout_rounded, size: 18, color: UC.muted),
-            label: const Text('Log out', style: TextStyle(color: UC.muted)),
+            icon: Icon(Icons.logout_rounded, size: 18, color: UC.muted),
+            label: Text('Log out', style: TextStyle(color: UC.muted)),
           ),
         ],
       ),

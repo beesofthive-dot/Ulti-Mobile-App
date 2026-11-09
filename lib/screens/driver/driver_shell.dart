@@ -11,7 +11,9 @@ import '../../widgets/notification_host.dart';
 import 'cards_screen.dart';
 import 'history_screen.dart';
 import 'my_qr_screen.dart';
+import 'notifications_tab.dart';
 import 'profile_screen.dart';
+import 'payment_approval_sheet.dart';
 import 'stations_screen.dart';
 import 'wallet/money_sheet.dart';
 import 'wallet/wallet_screen.dart';
@@ -28,6 +30,7 @@ class DriverShell extends StatefulWidget {
 class _DriverShellState extends State<DriverShell>
     with SingleTickerProviderStateMixin {
   int index = 0;
+  ChargeSession? _shownRequest;
 
   // Fades / lifts the tab body in on each tab change; IndexedStack keeps
   // each tab's state (search text, QR timer, scroll position).
@@ -51,14 +54,27 @@ class _DriverShellState extends State<DriverShell>
 
   @override
   Widget build(BuildContext context) {
+    // The attendant scanned this driver's QR or sent a MoMo prompt: ask the
+    // driver to approve it here.
+    final app = AppScope.of(context);
+    final req = app.qrRequestFor(app.me) ?? app.momoRequestFor(app.me);
+    if (req == null) {
+      _shownRequest = null;
+    } else if (_shownRequest != req) {
+      _shownRequest = req;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showPaymentApproval(context, req);
+      });
+    }
     final t = CurvedAnimation(parent: tabAnim, curve: Curves.easeOutCubic);
     final pages = [
       HomeTab(onTab: _go),
-      MyQrScreen(active: index == 1),
+      NotificationsTab(active: index == 1),
       const HistoryScreen(),
       const ProfileScreen(),
     ];
     return Scaffold(
+      appBar: DriverTopBar(app: app, onTab: _go),
       body: SafeArea(
         bottom: false,
         child: FadeTransition(
@@ -75,16 +91,16 @@ class _DriverShellState extends State<DriverShell>
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: _go,
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home_rounded),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.qr_code_2_rounded),
-            selectedIcon: Icon(Icons.qr_code_2_rounded),
-            label: 'Pay',
+            icon: AlertNavIcon(selected: false),
+            selectedIcon: AlertNavIcon(selected: true),
+            label: 'Alerts',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_rounded),
@@ -125,115 +141,120 @@ class HomeTab extends StatelessWidget {
     final recent = app.myHistory.take(2).toList();
     final card = app.activeCard;
 
+    final now = DateTime.now();
+    final history = app.myHistory;
+    final kwhTotal = history.fold<double>(0, (t, x) => t + (x.kwh ?? 0));
+    final spent = history.fold<double>(0, (t, x) => t + x.paidAmount);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
-        Row(
-          children: [
-            const UcLogo(size: 42),
-            const Spacer(),
-            const NotificationBell(),
-            const SizedBox(width: 4),
-            AccountAvatar(
-              initials: me.initials,
-              onTap: () => _account(context, app),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
         InfoCarousel(items: _info(context, app)),
-        const SizedBox(height: 22),
-        FadeSlideIn(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+        const SizedBox(height: 14),
+        PageHeader(
+          eyebrow: '${dm(now)} · ${_greeting()}',
+          title: '${_greeting()}, ${me.name.split(' ').first}',
+          subtitle: 'Available balance',
+          icon: Icons.account_balance_wallet_rounded,
+          bottom: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _push(context, const WalletScreen()),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: UC.teal,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            _greeting().toUpperCase(),
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              letterSpacing: 1.8,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF0B8F80),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    GradientText(
-                      me.name.split(' ').first,
+                    CountUp(
+                      me.walletBalance,
+                      format: money,
                       style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -.8,
+                        letterSpacing: -.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      card == null
+                          ? 'Wallet · tap for activity'
+                          : 'QR card •• ${card.last4} · tap for activity',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.fromLTRB(4, 3, 10, 3),
-                decoration: BoxDecoration(
-                  color: UC.success.withValues(alpha: .1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    PulseDot(size: 6),
-                    Text(
-                      'Account active',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: UC.success,
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: PressScale(
+                      child: SizedBox(
+                        height: 48,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: UC.teal,
+                            foregroundColor: UC.navy,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                          onPressed: () =>
+                              showMoneySheet(context, MoneyAction.load),
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Add money'),
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: PressScale(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white38),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                          onPressed: () =>
+                              showMoneySheet(context, MoneyAction.withdraw),
+                          icon: const Icon(Icons.north_east_rounded),
+                          label: const Text('Withdraw'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        FadeSlideIn(
-          index: 1,
-          child: _WalletCard(
-            balance: me.walletBalance,
-            onAdd: () => showMoneySheet(context, MoneyAction.load),
-            onWithdraw: () => showMoneySheet(context, MoneyAction.withdraw),
-            onOpen: () => _push(context, const WalletScreen()),
-          ),
-        ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _Tile(
               Icons.qr_code_2_rounded,
-              'My QR',
+              'Pay',
               0,
-              'Show to attendant',
+              'Scan at the till',
               const Color(0xFF0FB9A5),
-              () => onTab(1),
+              () => _push(context, const QrPage()),
             ),
             _Tile(
               Icons.location_on_outlined,
@@ -260,6 +281,52 @@ class HomeTab extends StatelessWidget {
               () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ManageCardsScreen()),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          // Fixed height so the tiles never squash on narrow phones.
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            mainAxisExtent: 120,
+          ),
+          children: [
+            StatTile(
+              'Charges',
+              history.length.toDouble(),
+              (v) => v.round().toString(),
+              Icons.receipt_long_outlined,
+              UC.info,
+              0,
+            ),
+            StatTile(
+              'Energy',
+              kwhTotal,
+              (v) => '${v.toStringAsFixed(1)} kWh',
+              Icons.bolt_outlined,
+              UC.brandGreen,
+              1,
+            ),
+            StatTile(
+              'Spent',
+              spent,
+              money,
+              Icons.payments_outlined,
+              UC.orange,
+              2,
+            ),
+            StatTile(
+              'Reward points',
+              app.rewardPoints.toDouble(),
+              (v) => v.round().toString(),
+              Icons.card_giftcard_rounded,
+              UC.purple,
+              3,
             ),
           ],
         ),
@@ -307,42 +374,6 @@ class HomeTab extends StatelessWidget {
   void _push(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 
-  void _account(BuildContext context, AppState app) {
-    final me = app.me;
-    final card = app.activeCard;
-    showAccountSheet(
-      context,
-      name: me.name,
-      initials: me.initials,
-      roleLabel: 'DRIVER',
-      details: [
-        ('Phone', me.phone),
-        ('Vehicle', '${me.plate} · ${me.vehicleType}'),
-        ('Wallet', money(me.walletBalance)),
-        ('QR card', card == null ? 'None active' : 'Active •• ${card.last4}'),
-        ('Reward points', '${app.rewardPoints}'),
-      ],
-      actions: [
-        SheetAction(Icons.person_outline_rounded, 'My profile', () => onTab(3)),
-        SheetAction(
-          Icons.credit_card_rounded,
-          'My cards',
-          () => _push(context, const ManageCardsScreen()),
-        ),
-        SheetAction(
-          Icons.card_giftcard_rounded,
-          'Rewards',
-          () => _push(context, const RewardsScreen()),
-        ),
-        SheetAction(
-          Icons.support_agent_rounded,
-          'Help & support',
-          () => _push(context, const SupportScreen()),
-        ),
-      ],
-    );
-  }
-
   /// Useful, tappable info for the top of Home.
   List<InfoItem> _info(BuildContext context, AppState app) {
     final me = app.me;
@@ -382,9 +413,10 @@ class HomeTab extends StatelessWidget {
           icon: Icons.receipt_long_rounded,
           color: UC.info,
           title:
-              'Last charge · ${(last.kwh ?? 0).toStringAsFixed(1)} kWh · ${money(last.paidAmount)}',
-          body:
-              '${last.branch.name} · ${ago(last.startedAt)} — tap for receipt',
+              'Last charge · ${(last.kwh ?? 0).toStringAsFixed(1)} kWh · ${money(last.paidAmount > 0 ? last.paidAmount : last.due)}',
+          body: last.paidAmount > 0
+              ? '${last.branch.name} · ${ago(last.startedAt)} — tap for receipt'
+              : '${last.branch.name} · ${ago(last.startedAt)} — waiting for payment',
           onTap: () => _push(context, DriverReceiptScreen(last)),
         ),
       InfoItem(
@@ -423,131 +455,6 @@ class HomeTab extends StatelessWidget {
           onTap: () => _push(context, StationDetailScreen(b)),
         ),
     ];
-  }
-}
-
-class _WalletCard extends StatelessWidget {
-  final double balance;
-  final VoidCallback onAdd;
-  final VoidCallback onWithdraw;
-  final VoidCallback onOpen;
-  const _WalletCard({
-    required this.balance,
-    required this.onAdd,
-    required this.onWithdraw,
-    required this.onOpen,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onOpen,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: heroGradient,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: UC.navy.withValues(alpha: .28),
-              blurRadius: 26,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            const HeroGlow(),
-            Positioned(
-              right: 16,
-              top: 16,
-              child: Opacity(
-                opacity: .9,
-                child: const UcLogo(size: 34, wordmark: false),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Available balance',
-                    style: TextStyle(color: Colors.white60, fontSize: 12.5),
-                  ),
-                  const SizedBox(height: 10),
-                  CountUp(
-                    balance,
-                    format: money,
-                    duration: const Duration(milliseconds: 1100),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Card balance · tap for activity',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PressScale(
-                          child: FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: UC.teal,
-                              foregroundColor: UC.navy,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              textStyle: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                              ),
-                            ),
-                            onPressed: onAdd,
-                            icon: const Icon(Icons.add_rounded, size: 18),
-                            label: const Text('Add money'),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: PressScale(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white38),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              textStyle: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                              ),
-                            ),
-                            onPressed: onWithdraw,
-                            icon: const Icon(
-                              Icons.north_east_rounded,
-                              size: 18,
-                            ),
-                            label: const Text('Withdraw'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -604,17 +511,17 @@ class _Tile extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w800,
-                      color: UC.navy,
+                      color: UC.title,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     sub,
                     maxLines: 2,
-                    style: const TextStyle(fontSize: 10.5, color: UC.muted),
+                    style: TextStyle(fontSize: 10.5, color: UC.muted),
                   ),
                 ],
               ),
@@ -666,7 +573,7 @@ class StationCard extends StatelessWidget {
                         '${b.distanceKm} km away',
                         textAlign: TextAlign.right,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, color: UC.muted),
+                        style: TextStyle(fontSize: 11, color: UC.muted),
                       ),
                     ),
                   ],
@@ -683,12 +590,12 @@ class StationCard extends StatelessWidget {
                   b.address,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: UC.muted),
+                  style: TextStyle(fontSize: 12, color: UC.muted),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.bolt_rounded, size: 15, color: UC.muted),
+                    Icon(Icons.bolt_rounded, size: 15, color: UC.muted),
                     Text(
                       '${money(b.tariff)}/kWh',
                       style: const TextStyle(
@@ -702,7 +609,7 @@ class StationCard extends StatelessWidget {
                         'Updated ${ago(b.statusUpdated)}',
                         textAlign: TextAlign.right,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10.5, color: UC.faint),
+                        style: TextStyle(fontSize: 10.5, color: UC.faint),
                       ),
                     ),
                   ],
@@ -712,6 +619,132 @@ class StationCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Account sheet for the driver: details and shortcuts.
+void showDriverAccount(
+  BuildContext context,
+  AppState app,
+  ValueChanged<int> onTab,
+) {
+  final me = app.me;
+  final card = app.activeCard;
+  void push(Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  showAccountSheet(
+    context,
+    name: me.name,
+    initials: me.initials,
+    roleLabel: 'DRIVER',
+    details: [
+      ('Phone', me.phone),
+      ('Vehicle', '${me.plate} · ${me.vehicleType}'),
+      ('Wallet', money(me.walletBalance)),
+      ('QR card', card == null ? 'None active' : 'Active •• ${card.last4}'),
+      ('Reward points', '${app.rewardPoints}'),
+    ],
+    actions: [
+      SheetAction(Icons.person_outline_rounded, 'My profile', () => onTab(3)),
+      SheetAction(
+        Icons.credit_card_rounded,
+        'My cards',
+        () => push(const ManageCardsScreen()),
+      ),
+      SheetAction(
+        Icons.card_giftcard_rounded,
+        'Rewards',
+        () => push(const RewardsScreen()),
+      ),
+      SheetAction(
+        Icons.support_agent_rounded,
+        'Help & support',
+        () => push(const SupportScreen()),
+      ),
+    ],
+  );
+}
+
+/// The same top bar as the attendant's: logo, who you are, a status pill, the
+/// notification bell and your avatar.
+class DriverTopBar extends StatelessWidget implements PreferredSizeWidget {
+  final AppState app;
+  final ValueChanged<int> onTab;
+  const DriverTopBar({super.key, required this.app, required this.onTab});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
+
+  @override
+  Widget build(BuildContext context) {
+    final me = app.me;
+    return AppBar(
+      toolbarHeight: 64,
+      titleSpacing: 20,
+      title: Row(
+        children: [
+          const UcLogo(size: 34, wordmark: false),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  me.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: UC.title,
+                  ),
+                ),
+                Text(
+                  me.plate,
+                  style: TextStyle(fontSize: 11.5, color: UC.muted),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(4, 3, 10, 3),
+              decoration: BoxDecoration(
+                color: UC.success.withValues(alpha: .1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const PulseDot(color: UC.success, size: 6),
+                  Flexible(
+                    child: Text(
+                      'Active',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: UC.success,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        NotificationBell(onTap: () => onTab(1)),
+        Padding(
+          padding: const EdgeInsets.only(right: 14, left: 2),
+          child: AccountAvatar(
+            initials: me.initials,
+            radius: 17,
+            onTap: () => showDriverAccount(context, app, onTab),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -170,7 +170,11 @@ Future<void> showAccountSheet(
                       for (var i = 0; i < actions.length; i++) ...[
                         if (i > 0) const Divider(indent: 56),
                         InsetTile(
-                          leading: IconTile(actions[i].icon, UC.navy, size: 34),
+                          leading: IconTile(
+                            actions[i].icon,
+                            UC.accent,
+                            size: 34,
+                          ),
                           title: Text(
                             actions[i].label,
                             style: const TextStyle(
@@ -178,7 +182,7 @@ Future<void> showAccountSheet(
                               fontSize: 14,
                             ),
                           ),
-                          trailing: const Icon(
+                          trailing: Icon(
                             Icons.chevron_right_rounded,
                             color: UC.faint,
                           ),
@@ -193,9 +197,17 @@ Future<void> showAccountSheet(
                 ),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             FadeSlideIn(
               index: 3,
+              child: Panel(
+                padding: EdgeInsets.zero,
+                child: const DarkModeTile(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            FadeSlideIn(
+              index: 4,
               child: GhostButton(
                 'Log out',
                 icon: Icons.logout_rounded,
@@ -241,7 +253,7 @@ Future<bool> confirmLogout(BuildContext context) {
         ],
         Text(
           openShift ? 'Log out anyway?' : 'You will need your phone number and password to sign in again.',
-          style: const TextStyle(fontSize: 13.5, color: UC.muted),
+          style: TextStyle(fontSize: 13.5, color: UC.muted),
         ),
       ],
     ),

@@ -104,6 +104,7 @@ class ProfileScreen extends StatelessWidget {
           ),
         ]),
         _Group('Settings', [
+          const DarkModeTile(),
           _Item(
             Icons.lock_outline_rounded,
             'Security',
@@ -212,16 +213,13 @@ class _Item extends StatelessWidget {
   Widget build(BuildContext context) {
     return InsetTile(
       onTap: onTap,
-      leading: IconTile(icon, UC.primary, size: 36),
+      leading: IconTile(icon, UC.accent, size: 36),
       title: Text(
         title,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       ),
-      subtitle: Text(
-        sub,
-        style: const TextStyle(fontSize: 12, color: UC.muted),
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: UC.faint),
+      subtitle: Text(sub, style: TextStyle(fontSize: 12, color: UC.muted)),
+      trailing: Icon(Icons.chevron_right_rounded, color: UC.faint),
     );
   }
 }
@@ -353,25 +351,21 @@ class RewardsScreen extends StatelessWidget {
                         o.campaignEnabled
                             ? StatusChip(
                                 '${o.points} pts',
-                                UC.primary,
+                                UC.accent,
                                 dot: false,
                               )
-                            : const StatusChip(
-                                'Coming soon',
-                                UC.muted,
-                                dot: false,
-                              ),
+                            : StatusChip('Coming soon', UC.muted, dot: false),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
                       o.detail,
-                      style: const TextStyle(fontSize: 12.5, color: UC.muted),
+                      style: TextStyle(fontSize: 12.5, color: UC.muted),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Expires ${dmy(o.expires)} · Terms apply',
-                      style: const TextStyle(fontSize: 11, color: UC.faint),
+                      style: TextStyle(fontSize: 11, color: UC.faint),
                     ),
                     const SizedBox(height: 10),
                     SizedBox(
@@ -424,10 +418,7 @@ class RewardsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (app.redemptions.isEmpty)
-                  const Text(
-                    'No redemptions yet',
-                    style: TextStyle(color: UC.muted),
-                  ),
+                  Text('No redemptions yet', style: TextStyle(color: UC.muted)),
                 for (final r in app.redemptions)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
@@ -482,7 +473,7 @@ class _SupportScreenState extends State<SupportScreen> {
                   showCheckmark: false,
                   selectedColor: UC.limeSoft,
                   backgroundColor: UC.surface,
-                  side: BorderSide(color: topic == t ? UC.primary : UC.line),
+                  side: BorderSide(color: topic == t ? UC.accent : UC.line),
                   onSelected: (_) => setState(() => topic = t),
                 ),
             ],

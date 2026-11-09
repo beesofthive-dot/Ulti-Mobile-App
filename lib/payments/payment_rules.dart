@@ -13,11 +13,15 @@ enum PaymentParty {
 class PaymentRules {
   const PaymentRules._();
 
-  /// At the branch only two methods exist: scan the QR card on the machine,
-  /// or send a Mobile Money prompt to the driver's phone.
+  /// At the branch: scan the driver's QR from their app (wallet), scan the
+  /// QR card on the machine, or send a Mobile Money prompt.
   static List<PayMethod> methodsFor(PaymentParty party) => switch (party) {
     PaymentParty.driver => const [PayMethod.wallet, PayMethod.momo],
-    PaymentParty.sales => const [PayMethod.card, PayMethod.momo],
+    PaymentParty.sales => const [
+      PayMethod.wallet,
+      PayMethod.card,
+      PayMethod.momo,
+    ],
   };
 
   /// Why the scanned card cannot pay for [s], or null when it can.

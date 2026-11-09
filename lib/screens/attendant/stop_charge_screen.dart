@@ -136,7 +136,7 @@ class _StopChargeScreenState extends State<StopChargeScreen> {
                       ),
                       Text(
                         '${s.driver.name} · ${s.charger.id}',
-                        style: const TextStyle(fontSize: 12, color: UC.muted),
+                        style: TextStyle(fontSize: 12, color: UC.muted),
                       ),
                     ],
                   ),
@@ -144,7 +144,7 @@ class _StopChargeScreenState extends State<StopChargeScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
+                    Text(
                       'Elapsed',
                       style: TextStyle(fontSize: 11, color: UC.muted),
                     ),
@@ -221,13 +221,13 @@ class _StopChargeScreenState extends State<StopChargeScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         'Variance',
                         style: TextStyle(fontSize: 13, color: UC.muted),
                       ),
                       const Spacer(),
                       if (v == null)
-                        const StatusChip('Enter readings', UC.faint, dot: false)
+                        StatusChip('Enter readings', UC.faint, dot: false)
                       else if (!_hasVariance)
                         const StatusChip('Matches', UC.success)
                       else
@@ -272,7 +272,7 @@ class _StopChargeScreenState extends State<StopChargeScreen> {
                         photo ? 'Photo attached' : 'Attach photo of display',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      const Text(
+                      Text(
                         'Optional evidence',
                         style: TextStyle(fontSize: 11.5, color: UC.muted),
                       ),
@@ -302,7 +302,7 @@ class _StopChargeScreenState extends State<StopChargeScreen> {
       bottomNavigationBar: SafeArea(
         child: Container(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: UC.bg,
             border: Border(top: BorderSide(color: UC.line)),
           ),

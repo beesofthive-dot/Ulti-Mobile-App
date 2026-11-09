@@ -184,10 +184,10 @@ class _InfoCard extends StatelessWidget {
                           item.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
-                            color: UC.navy,
+                            color: UC.title,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -195,7 +195,7 @@ class _InfoCard extends StatelessWidget {
                           item.body,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             height: 1.3,
                             color: UC.muted,

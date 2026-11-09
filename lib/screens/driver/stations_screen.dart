@@ -243,7 +243,7 @@ class StationDetailScreen extends StatelessWidget {
           const SizedBox(height: 16),
           StatusPanel(info, b.statusUpdated),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             '  Status set by branch staff — not machine telemetry.',
             style: TextStyle(fontSize: 11, color: UC.faint),
           ),

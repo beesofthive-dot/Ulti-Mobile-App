@@ -10,12 +10,12 @@ import '../../widgets/motion.dart';
 import '../../widgets/notification_host.dart';
 import '../../widgets/txn_list.dart';
 import 'drivers_tab.dart';
-import 'payments_tab.dart';
 import 'session_router.dart';
 import 'shift_tab.dart';
-import 'start_charge_tab.dart';
+import 'record_charge_tab.dart';
 
-/// Bottom navigation: Today | Charge | Drivers | MoMo | Shift.
+/// Bottom navigation: Today | Record | Drivers | Shift. Payment (scan or
+/// MoMo) is chosen right after a charge is recorded, so it has no tab.
 class AttendantShell extends StatefulWidget {
   const AttendantShell({super.key});
 
@@ -57,19 +57,14 @@ class _AttendantShellState extends State<AttendantShell>
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final pages = [
-      TodayTab(onQuickStart: () => _startFor(null), onOpenShift: () => _go(4)),
-      StartChargeTab(
-        key: ValueKey(preselected?.id),
-        preselected: preselected,
-        onPickDriver: () => _go(2),
-      ),
+      TodayTab(onQuickStart: () => _startFor(null), onOpenShift: () => _go(3)),
+      RecordChargeTab(preselected: preselected, onPickDriver: () => _go(2)),
       DriversTab(onStartCharge: _startFor),
-      const PaymentsTab(),
-      const ShiftTab(),
+      ShiftTab(onRecord: () => _go(1)),
     ];
     final t = CurvedAnimation(parent: tabAnim, curve: Curves.easeOutCubic);
     return Scaffold(
-      appBar: AttendantTopBar(app: app, onOpenShift: () => _go(4)),
+      appBar: AttendantTopBar(app: app, onOpenShift: () => _go(3)),
       body: FadeTransition(
         opacity: t,
         child: SlideTransition(
@@ -92,17 +87,12 @@ class _AttendantShellState extends State<AttendantShell>
           NavigationDestination(
             icon: Icon(Icons.bolt_outlined),
             selectedIcon: Icon(Icons.bolt),
-            label: 'Charge',
+            label: 'Record',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
             label: 'Drivers',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.phone_android_outlined),
-            selectedIcon: Icon(Icons.phone_android),
-            label: 'MoMo',
           ),
           NavigationDestination(
             icon: Icon(Icons.schedule_outlined),
@@ -168,15 +158,15 @@ class AttendantTopBar extends StatelessWidget implements PreferredSizeWidget {
                 Text(
                   app.branch!.name,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
-                    color: UC.navy,
+                    color: UC.title,
                   ),
                 ),
                 Text(
                   app.attendantName,
-                  style: const TextStyle(fontSize: 11.5, color: UC.muted),
+                  style: TextStyle(fontSize: 11.5, color: UC.muted),
                 ),
               ],
             ),
@@ -384,7 +374,7 @@ class TodayTab extends StatelessWidget {
                     ),
                     onPressed: onQuickStart,
                     icon: const Icon(Icons.bolt_rounded),
-                    label: const Text('Quick start charge'),
+                    label: const Text('Record a charge'),
                   ),
                 ),
               ),
@@ -403,7 +393,7 @@ class TodayTab extends StatelessWidget {
             mainAxisExtent: 120,
           ),
           children: [
-            _Stat(
+            StatTile(
               'Sessions',
               list.length.toDouble(),
               (v) => v.round().toString(),
@@ -411,7 +401,7 @@ class TodayTab extends StatelessWidget {
               UC.info,
               0,
             ),
-            _Stat(
+            StatTile(
               'Energy',
               app.kwhToday,
               (v) => '${v.toStringAsFixed(1)} kWh',
@@ -419,7 +409,7 @@ class TodayTab extends StatelessWidget {
               UC.brandGreen,
               1,
             ),
-            _Stat(
+            StatTile(
               'Pending payments',
               app.pendingPayments.toDouble(),
               (v) => v.round().toString(),
@@ -427,7 +417,7 @@ class TodayTab extends StatelessWidget {
               UC.orange,
               2,
             ),
-            _Stat(
+            StatTile(
               'Active charges',
               active.length.toDouble(),
               (v) => v.round().toString(),
@@ -481,71 +471,6 @@ class TodayTab extends StatelessWidget {
   }
 }
 
-class _Stat extends StatelessWidget {
-  final String label;
-  final double value;
-  final String Function(double) format;
-  final IconData icon;
-  final Color tint;
-  final int index;
-  const _Stat(
-    this.label,
-    this.value,
-    this.format,
-    this.icon,
-    this.tint,
-    this.index,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeSlideIn(
-      index: index + 1,
-      child: Panel(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                IconTile(icon, tint, size: 32),
-                const Spacer(),
-                Container(
-                  width: 18,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: tint.withValues(alpha: .35),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CountUp(
-                  value,
-                  format: format,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: UC.navy,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: const TextStyle(fontSize: 11.5, color: UC.muted),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _SessionRow extends StatelessWidget {
   final ChargeSession s;
   const _SessionRow(this.s);
@@ -592,7 +517,7 @@ class _SessionRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${s.id} · ${s.charger.id} · ${hm(s.startedAt)}',
-                    style: const TextStyle(fontSize: 11.5, color: UC.muted),
+                    style: TextStyle(fontSize: 11.5, color: UC.muted),
                   ),
                 ],
               ),

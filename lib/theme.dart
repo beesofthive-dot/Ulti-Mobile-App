@@ -10,17 +10,38 @@ class UC {
   static const brandGreen = Color(0xFF96C949);
   static const bolt = Color(0xFF66FAE9);
 
-  static const bg = Color(0xFFF5F7FA);
-  static const surface = Colors.white;
-  static const ink = Color(0xFF0E1A2E);
-  static const muted = Color(0xFF6E7A8C);
-  static const faint = Color(0xFFA5AFBD);
-  static const line = Color(0xFFE2E7EE);
+  // ---- Theme-aware tokens ---------------------------------------------
+  // Flip between light and dark. Read them at build time (they cannot be
+  // used in `const` expressions). [setDark] rebuilds the whole tree.
+  static bool dark = false;
+  static final ValueNotifier<bool> darkNotifier = ValueNotifier(false);
+  static Color _p(int light, int darkValue) => Color(dark ? darkValue : light);
+
+  static Color get bg => _p(0xFFF5F7FA, 0xFF08162D);
+  static Color get surface => _p(0xFFFFFFFF, 0xFF102441);
+  static Color get ink => _p(0xFF0E1A2E, 0xFFF2F7FA);
+  static Color get muted => _p(0xFF6E7A8C, 0xFF9FB0C6);
+  static Color get faint => _p(0xFFA5AFBD, 0xFF6F84A0);
+  static Color get line => _p(0xFFE2E7EE, 0xFF263B58);
+  static Color get limeSoft => _p(0xFFE0FAF6, 0xFF133944);
+
+  /// Headings and titles: navy on light, near-white on dark.
+  static Color get title => _p(0xFF0E2142, 0xFFF2F7FA);
+
+  /// Selected / active / primary-button colour: navy on light, teal on dark.
+  static Color get accent => _p(0xFF0E2142, 0xFF12E8CF);
+  static Color get onAccent => _p(0xFFFFFFFF, 0xFF0E2142);
+
+  /// Teal used for small text and icons (readable on both themes).
+  static Color get tealText => _p(0xFF0B8F80, 0xFF12E8CF);
+
+  /// Map and canvas backdrop outside the phone column.
+  static Color get backdrop => _p(0xFFE6EBF2, 0xFF050E1E);
+
   static const primary = navy;
   static const primarySoft = Color(0xFF1A3159);
   // Accent used on dark surfaces (buttons, highlights): logo teal.
   static const lime = teal;
-  static const limeSoft = Color(0xFFE0FAF6);
   static const success = Color(0xFF2E9E5B);
   static const warning = Color(0xFFD48A06);
   static const danger = Color(0xFFD14343);
@@ -34,8 +55,10 @@ class UC {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primary,
-        primary: primary,
+        seedColor: navy,
+        brightness: dark ? Brightness.dark : Brightness.light,
+        primary: accent,
+        onPrimary: onAccent,
         secondary: lime,
         surface: surface,
         error: danger,
@@ -89,16 +112,20 @@ class UC {
         elevation: 0,
         scrolledUnderElevation: 2,
         shadowColor: navy.withValues(alpha: .12),
-        foregroundColor: navy,
+        foregroundColor: title,
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w800,
           letterSpacing: -.3,
-          color: navy,
+          color: title,
         ),
       ),
-      dividerTheme: const DividerThemeData(color: line, thickness: 1, space: 1),
+      dialogTheme: DialogThemeData(
+        backgroundColor: dark ? const Color(0xFF162F52) : surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dividerTheme: DividerThemeData(color: line, thickness: 1, space: 1),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
@@ -107,18 +134,18 @@ class UC {
           horizontal: 14,
           vertical: 15,
         ),
-        hintStyle: const TextStyle(color: faint, fontSize: 14),
+        hintStyle: TextStyle(color: faint, fontSize: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: line),
+          borderSide: BorderSide(color: line),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: line),
+          borderSide: BorderSide(color: line),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primary, width: 1.4),
+          borderSide: BorderSide(color: accent, width: 1.4),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -131,14 +158,16 @@ class UC {
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? primary : surface,
+          (s) => s.contains(WidgetState.selected) ? accent : surface,
         ),
-        side: const BorderSide(color: faint, width: 1.4),
+        checkColor: WidgetStatePropertyAll(onAccent),
+        side: BorderSide(color: faint, width: 1.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
-      snackBarTheme: const SnackBarThemeData(
+      snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: navy,
+        backgroundColor: dark ? const Color(0xFF1B3358) : navy,
+        contentTextStyle: const TextStyle(color: Colors.white),
         elevation: 6,
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -163,5 +192,19 @@ class UC {
         ),
       ),
     );
+  }
+
+  /// Switches light / dark and repaints every screen in place, keeping the
+  /// navigation stack and all screen state.
+  static void setDark(bool value) {
+    if (dark == value) return;
+    dark = value;
+    darkNotifier.value = value;
+    void rebuild(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(rebuild);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildren(rebuild);
   }
 }

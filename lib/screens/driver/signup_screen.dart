@@ -19,6 +19,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final name = TextEditingController();
   final plate = TextEditingController();
   final password = TextEditingController();
+  final email = TextEditingController();
   String type = 'Sedan EV';
   bool consent = false;
   bool marketing = false;
@@ -51,6 +52,12 @@ class _SignupScreenState extends State<SignupScreen> {
           e = 'Enter your vehicle plate';
         } else if (app.findDuplicate('—', plate.text) != null) {
           e = 'This plate is already registered to another driver.';
+        } else if (email.text.trim().isNotEmpty &&
+            !AppState.isEmail(email.text)) {
+          e = 'Enter a valid email address or leave it blank';
+        } else if (email.text.trim().isNotEmpty &&
+            app.accountForId(email.text) != null) {
+          e = 'This email already has an account. Sign in instead.';
         } else if (password.text.length < 6) {
           e = 'Choose a password of at least 6 characters';
         }
@@ -75,6 +82,7 @@ class _SignupScreenState extends State<SignupScreen> {
       plate.text.trim(),
       type,
       password.text,
+      email: email.text,
     );
     Navigator.of(context).pop();
     app.signIn(a);
@@ -106,7 +114,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     height: 4,
                     margin: EdgeInsets.only(right: i < 3 ? 6 : 0),
                     decoration: BoxDecoration(
-                      color: i <= step ? UC.primary : UC.line,
+                      color: i <= step ? UC.accent : UC.line,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -139,7 +147,7 @@ class _SignupScreenState extends State<SignupScreen> {
             1 => [
               Text(
                 'Code sent to ${phone.text}',
-                style: const TextStyle(color: UC.muted, fontSize: 13),
+                style: TextStyle(color: UC.muted, fontSize: 13),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -180,12 +188,22 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 16),
               LabeledField(
+                label: 'Email',
+                optional: true,
+                hint: 'you@example.com',
+                icon: Icons.alternate_email_rounded,
+                controller: email,
+                keyboardType: TextInputType.emailAddress,
+                helper: 'Lets you sign in and reset your password by email.',
+              ),
+              const SizedBox(height: 16),
+              LabeledField(
                 label: 'Create password',
                 hint: 'At least 6 characters',
                 icon: Icons.lock_outline_rounded,
                 controller: password,
                 obscure: true,
-                helper: 'You will sign in with your phone number and this password.',
+                helper: 'You will sign in with your phone number or email and this password.',
               ),
               const SizedBox(height: 16),
               const Text(
@@ -209,7 +227,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       showCheckmark: false,
                       selectedColor: UC.limeSoft,
                       backgroundColor: UC.surface,
-                      side: BorderSide(color: type == t ? UC.primary : UC.line),
+                      side: BorderSide(color: type == t ? UC.accent : UC.line),
                       onSelected: (_) => setState(() => type = t),
                     ),
                 ],

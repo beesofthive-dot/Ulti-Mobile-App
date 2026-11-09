@@ -69,7 +69,7 @@ class _CardScanPanelState extends State<CardScanPanel>
                             ? Icons.sync_rounded
                             : Icons.contactless_rounded,
                         size: 44,
-                        color: UC.navy,
+                        color: UC.title,
                       ),
                     ),
                   ),
@@ -89,7 +89,7 @@ class _CardScanPanelState extends State<CardScanPanel>
                     ? 'No QR card is linked to ${s.driver.name}.'
                     : 'Expecting card •• ${card.substring(card.length - 4)} · ${s.driver.name}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12.5, color: UC.muted),
+                style: TextStyle(fontSize: 12.5, color: UC.muted),
               ),
             ],
           ),
@@ -106,7 +106,7 @@ class _CardScanPanelState extends State<CardScanPanel>
         SwitchListTile(
           value: wrongCard,
           onChanged: reading ? null : (v) => setState(() => wrongCard = v),
-          title: const Text(
+          title: Text(
             'Demo: scan a different card',
             style: TextStyle(fontSize: 12.5, color: UC.muted),
           ),

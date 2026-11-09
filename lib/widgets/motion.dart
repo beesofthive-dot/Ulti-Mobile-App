@@ -193,8 +193,10 @@ class GradientText extends StatelessWidget {
   Widget build(BuildContext context) {
     return ShaderMask(
       blendMode: BlendMode.srcIn,
-      shaderCallback: (r) => const LinearGradient(
-        colors: [UC.navy, Color(0xFF1B5E8C), Color(0xFF0FB9A5)],
+      shaderCallback: (r) => LinearGradient(
+        colors: UC.dark
+            ? const [Color(0xFFF2F7FA), Color(0xFF66FAE9), Color(0xFF12E8CF)]
+            : const [UC.navy, Color(0xFF1B5E8C), Color(0xFF0FB9A5)],
         stops: [0, .55, 1],
       ).createShader(r),
       child: Text(text, style: style),
@@ -246,6 +248,120 @@ class HeroGlow extends StatelessWidget {
     height: d,
     decoration: BoxDecoration(shape: BoxShape.circle, color: c),
   );
+}
+
+/// Large outlined teal / green rings drawn behind a hero or splash, for a
+/// layered, branded backdrop. Fill the parent with it inside a [Stack].
+class BrandRings extends StatefulWidget {
+  final double strength;
+  const BrandRings({super.key, this.strength = 1});
+
+  @override
+  State<BrandRings> createState() => _BrandRingsState();
+}
+
+class _BrandRingsState extends State<BrandRings>
+    with SingleTickerProviderStateMixin {
+  // The rings drift and breathe slowly so the backdrop feels alive.
+  late final AnimationController c = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 12),
+  )..repeat();
+
+  @override
+  void dispose() {
+    c.dispose();
+    super.dispose();
+  }
+
+  Widget _ring(double d, double w, Color col) => Container(
+    width: d,
+    height: d,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: col, width: w),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final k = widget.strength;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: ClipRect(
+          child: AnimatedBuilder(
+            animation: c,
+            builder: (context, _) {
+              final t = c.value * 2 * math.pi;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: -150 + 14 * math.sin(t),
+                    top: -170 + 10 * math.cos(t),
+                    child: Transform.scale(
+                      scale: 1 + .04 * math.sin(t),
+                      child: _ring(340, 60, UC.teal.withValues(alpha: .09 * k)),
+                    ),
+                  ),
+                  Positioned(
+                    right: -130 + 12 * math.cos(t),
+                    bottom: -150 + 12 * math.sin(t),
+                    child: Transform.scale(
+                      scale: 1 - .04 * math.sin(t),
+                      child: _ring(
+                        280,
+                        50,
+                        UC.brandGreen.withValues(alpha: .09 * k),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Floats its child gently up and down, forever.
+class Bob extends StatefulWidget {
+  final Widget child;
+  final double amplitude;
+  const Bob({super.key, required this.child, this.amplitude = 5});
+
+  @override
+  State<Bob> createState() => _BobState();
+}
+
+class _BobState extends State<Bob> with SingleTickerProviderStateMixin {
+  late final AnimationController c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: c,
+      child: widget.child,
+      builder: (context, child) => Transform.translate(
+        offset: Offset(
+          0,
+          widget.amplitude * (2 * Curves.easeInOut.transform(c.value) - 1),
+        ),
+        child: child,
+      ),
+    );
+  }
 }
 
 /// Gently bobbing icon used as a decoration in headers.
@@ -467,10 +583,7 @@ class PageTitle extends StatelessWidget {
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: const TextStyle(fontSize: 13, color: UC.muted),
-            ),
+            Text(subtitle!, style: TextStyle(fontSize: 13, color: UC.muted)),
           ],
         ],
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ulti_charge/main.dart';
+import 'package:ulti_charge/models.dart';
 import 'package:ulti_charge/state.dart';
 
 void phone(WidgetTester tester) {
@@ -45,7 +46,7 @@ void main() {
     phone(tester);
     await start(tester);
     await signIn(tester, '020 000 0001', 'nope');
-    expect(find.text('Phone number or password is incorrect.'), findsOneWidget);
+    expect(find.text('Phone, email or password is incorrect.'), findsOneWidget);
   });
 
   testWidgets('attendant goes straight to clock in at the assigned terminal', (
@@ -70,16 +71,66 @@ void main() {
     tester,
   ) async {
     phone(tester);
-    await start(tester);
-    await tester.tap(find.text('Forgot password?'));
+    final app = AppState();
+    await tester.pumpWidget(UltiChargeApp(state: app));
+    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 600));
+    app.flash('Hello from a banner');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
     expect(tester.takeException(), isNull);
-    expect(find.textContaining('A reset code will be sent'), findsOneWidget);
+    expect(find.textContaining('Hello from a banner'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.textContaining('A reset code will be sent'), findsNothing);
+    expect(find.textContaining('Hello from a banner'), findsNothing);
+  });
+
+  testWidgets('sign in with an SMS code', (tester) async {
+    phone(tester);
+    await start(tester);
+    await tester.tap(find.text('One-time code'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(find.byType(TextField).at(0), '024 555 0187');
+    await tester.tap(find.text('Send code'));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Enter your code'), findsOneWidget);
+    expect(find.textContaining('Your Ulti Charge code is'), findsOneWidget);
+    // The demo SMS fills and submits the code.
+    await tester.tap(find.textContaining('Your Ulti Charge code is'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Available balance'), findsOneWidget);
+  });
+
+  testWidgets('forgot password resets it with a code', (tester) async {
+    phone(tester);
+    final app = AppState();
+    await tester.pumpWidget(UltiChargeApp(state: app));
+    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Reset your password'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(0), '024 555 0187');
+    await tester.tap(find.text('Send code'));
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.textContaining('Your Ulti Charge code is'));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Create a new password'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(0), 'newpass77');
+    await tester.enterText(find.byType(TextField).at(1), 'newpass77');
+    await tester.tap(find.text('Save password'));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Password updated'), findsOneWidget);
+    expect(app.authenticate('0245550187', 'newpass77'), isNotNull);
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('driver number opens driver home', (tester) async {
@@ -87,7 +138,7 @@ void main() {
     await start(tester);
     await signIn(tester, '024 555 0187', 'driver123');
     expect(find.text('Available balance'), findsOneWidget);
-    expect(find.text('Kwame'), findsOneWidget);
+    expect(find.textContaining('Kwame'), findsWidgets);
   });
 
   group('desktop-size window still shows a phone app', () {
@@ -112,5 +163,56 @@ void main() {
       expect(find.text('Assigned terminal'), findsOneWidget);
       expect(tester.getSize(find.byType(Scaffold).first).width, 430);
     });
+  });
+
+  testWidgets('driver approves a scanned QR request and is charged', (
+    tester,
+  ) async {
+    phone(tester);
+    final app = AppState();
+    // Attendant side: a billed charge, and the driver's QR on screen.
+    app.signIn(app.authenticate('020 000 0001', 'attend123')!);
+    app.clockIn();
+    final s = app.startSession(
+      driver: app.drivers.first,
+      charger: app.branch!.chargers.first,
+    );
+    app.recordReadings(
+      s,
+      kwh: 24 / s.tariff,
+      amount: 24,
+      photo: false,
+      notes: '',
+      varianceReason: '',
+    );
+    app.registerQr(s.driver, 'ABCD2345EFGH', const Duration(seconds: 60));
+    final before = s.driver.walletBalance;
+    // The scan opens a request (real delay inside, so run it for real).
+    late Future<dynamic> result;
+    await tester.runAsync(() async {
+      result = app.requestQrPayment(s, app.liveQrPayload(s.driver)!);
+      await Future<void>.delayed(const Duration(milliseconds: 1300));
+    });
+    expect(app.awaitingQr(s), isTrue);
+
+    // Driver side: sign in and the approval sheet appears.
+    app.signOut();
+    app.signIn(app.authenticate('024 555 0187', 'driver123')!);
+    await tester.pumpWidget(UltiChargeApp(state: app));
+    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('PAYMENT REQUEST'), findsOneWidget);
+    expect(find.text('Balance after'), findsOneWidget);
+
+    await tester.tap(find.textContaining('Pay GH'));
+    await tester.pump();
+    await tester.runAsync(() async => await result);
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(find.text('Payment successful'), findsWidgets);
+    expect(s.driver.walletBalance, before - 24);
+    expect(s.status, SessionStatus.paid);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 1));
   });
 }

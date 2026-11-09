@@ -128,7 +128,7 @@ class _MoneySheetState extends State<_MoneySheet> {
                     isLoad
                         ? 'From Mobile Money to your card'
                         : 'From your card to Mobile Money',
-                    style: const TextStyle(fontSize: 12.5, color: UC.muted),
+                    style: TextStyle(fontSize: 12.5, color: UC.muted),
                   ),
                 ],
               ),
@@ -237,7 +237,7 @@ class _MoneySheetState extends State<_MoneySheet> {
                 ? 'We sent a prompt for ${money(sent)} to $sentTo. Enter your MoMo PIN to approve.'
                 : '${money(sent)} is on its way to $sentTo.',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, height: 1.45, color: UC.muted),
+            style: TextStyle(fontSize: 13, height: 1.45, color: UC.muted),
           ),
         ],
       ),
@@ -286,7 +286,7 @@ class _MoneySheetState extends State<_MoneySheet> {
                 ? 'Your card balance is now ${money(balance)}.'
                 : 'Sent to $sentTo. Your card balance is now ${money(balance)}.',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: UC.muted),
+            style: TextStyle(fontSize: 13, color: UC.muted),
           ),
           const SizedBox(height: 22),
           PrimaryButton(

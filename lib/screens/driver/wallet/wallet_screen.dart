@@ -233,7 +233,7 @@ class _EntryRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${e.label} · ${stamp(e.at)}',
-                  style: const TextStyle(fontSize: 11.5, color: UC.muted),
+                  style: TextStyle(fontSize: 11.5, color: UC.muted),
                 ),
               ],
             ),

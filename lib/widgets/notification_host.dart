@@ -155,7 +155,7 @@ class NotificationCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       n.body,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: UC.ink,
                         fontSize: 13,
                         height: 1.35,
@@ -170,7 +170,7 @@ class NotificationCard extends StatelessWidget {
             IconButton(
               visualDensity: VisualDensity.compact,
               onPressed: onClose,
-              icon: const Icon(Icons.close_rounded, color: UC.muted, size: 18),
+              icon: Icon(Icons.close_rounded, color: UC.muted, size: 18),
             ),
           ],
         ),
@@ -181,7 +181,9 @@ class NotificationCard extends StatelessWidget {
 
 /// Bell with an unread badge; opens the notification centre.
 class NotificationBell extends StatelessWidget {
-  const NotificationBell({super.key});
+  /// Overrides the default (opening the notifications page).
+  final VoidCallback? onTap;
+  const NotificationBell({super.key, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -190,14 +192,18 @@ class NotificationBell extends StatelessWidget {
     return IconButton(
       visualDensity: VisualDensity.compact,
       tooltip: 'Notifications',
-      onPressed: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
-      ),
+      onPressed:
+          onTap ??
+          () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const NotificationsScreen(),
+            ),
+          ),
       icon: Badge(
         isLabelVisible: unread > 0,
         label: Text('$unread'),
         backgroundColor: UC.danger,
-        child: const Icon(Icons.notifications_none_rounded, color: UC.muted),
+        child: Icon(Icons.notifications_none_rounded, color: UC.muted),
       ),
     );
   }
