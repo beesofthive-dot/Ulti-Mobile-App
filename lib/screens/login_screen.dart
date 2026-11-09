@@ -6,6 +6,29 @@ import '../widgets/charger_art.dart';
 import '../widgets/common.dart';
 import 'driver/signup_screen.dart';
 
+typedef _Demo = ({String label, String phone, String password, IconData icon});
+
+const List<_Demo> _demo = [
+  (
+    label: 'Attendant · Efua Asante',
+    phone: '020 000 0001',
+    password: 'attend123',
+    icon: Icons.badge_outlined,
+  ),
+  (
+    label: 'Attendant · Kofi Annan',
+    phone: '020 000 0002',
+    password: 'attend123',
+    icon: Icons.badge_outlined,
+  ),
+  (
+    label: 'Driver · Kwame Mensah',
+    phone: '024 555 0187',
+    password: 'driver123',
+    icon: Icons.directions_car_outlined,
+  ),
+];
+
 /// AT-01 / driver sign-in. One login: the account behind the phone number
 /// decides whether the attendant or driver workspace opens.
 class LoginScreen extends StatefulWidget {
@@ -176,7 +199,45 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
+
+                // ---- Demo accounts (tap to fill) ----
+                Panel(
+                  padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(10, 0, 10, 4),
+                        child: Eyebrow('Demo accounts · tap to fill'),
+                      ),
+                      for (final d in _demo)
+                        InsetTile(
+                          onTap: () => setState(() {
+                            phone.text = d.phone;
+                            pass.text = d.password;
+                            phoneErr = passErr = authErr = null;
+                          }),
+                          leading: IconTile(d.icon, UC.navy, size: 36),
+                          title: Text(
+                            d.label,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${d.phone}  ·  ${d.password}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: UC.muted,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 // ---- Illustration ----
                 const ChargerArt(height: 128, withCar: true),
