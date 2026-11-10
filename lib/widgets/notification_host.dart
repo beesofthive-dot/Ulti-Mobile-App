@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../notifications/app_notification.dart';
+import '../screens/driver/notifications_tab.dart' show AlertNavIcon;
 import '../screens/notifications_screen.dart';
 import '../state.dart';
 import '../theme.dart';
@@ -87,7 +88,16 @@ class _NotificationHostState extends State<NotificationHost> {
                             app.dismissBanner();
                           }
                         },
-                        child: NotificationCard(n, onClose: app.dismissBanner),
+                        child: NotificationCard(
+                          n,
+                          onClose: app.dismissBanner,
+                          countdown: Duration(
+                            seconds:
+                                n.tone == Tone.danger || n.tone == Tone.warning
+                                ? 6
+                                : 4,
+                          ),
+                        ),
                       ),
                     ),
             ),
@@ -110,7 +120,15 @@ class _NotificationHostState extends State<NotificationHost> {
 class NotificationCard extends StatelessWidget {
   final AppNotification n;
   final VoidCallback onClose;
-  const NotificationCard(this.n, {super.key, required this.onClose});
+
+  /// When set, a thin bar under the card drains over this time.
+  final Duration? countdown;
+  const NotificationCard(
+    this.n, {
+    super.key,
+    required this.onClose,
+    this.countdown,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -118,63 +136,100 @@ class NotificationCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
         decoration: BoxDecoration(
           color: Color.alphaBlend(color.withValues(alpha: .09), UC.surface),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: color.withValues(alpha: .35)),
           boxShadow: [
             BoxShadow(
-              color: UC.navy.withValues(alpha: .16),
-              blurRadius: 24,
+              color: color.withValues(alpha: .22),
+              blurRadius: 26,
               offset: const Offset(0, 10),
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: Icon(icon, color: color, size: 24),
+              padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+              child: _row(color, icon),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    n.title,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w800,
+            if (countdown != null)
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 1, end: 0),
+                duration: countdown!,
+                curve: Curves.linear,
+                builder: (_, v, _) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: v,
+                    child: Container(
+                      height: 3,
+                      color: color.withValues(alpha: .7),
                     ),
                   ),
-                  if (n.body.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      n.body,
-                      style: TextStyle(
-                        color: UC.ink,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-            // No tooltip here: this banner sits above the Navigator, so there
-            // is no Overlay for a tooltip to use.
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              onPressed: onClose,
-              icon: Icon(Icons.close_rounded, color: UC.muted, size: 18),
-            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _row(Color color, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Icon pops in with a little overshoot.
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 520),
+          curve: Curves.elasticOut,
+          builder: (_, v, child) =>
+              Transform.scale(scale: v.clamp(0.0, 1.4), child: child),
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                n.title,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (n.body.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  n.body,
+                  style: TextStyle(color: UC.ink, fontSize: 13, height: 1.35),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // No tooltip here: this banner sits above the Navigator, so there
+        // is no Overlay for a tooltip to use.
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          onPressed: onClose,
+          icon: Icon(Icons.close_rounded, color: UC.muted, size: 18),
+        ),
+      ],
     );
   }
 }
@@ -187,8 +242,6 @@ class NotificationBell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final app = AppScope.of(context);
-    final unread = app.unreadCount;
     return IconButton(
       visualDensity: VisualDensity.compact,
       tooltip: 'Notifications',
@@ -199,11 +252,10 @@ class NotificationBell extends StatelessWidget {
               builder: (_) => const NotificationsScreen(),
             ),
           ),
-      icon: Badge(
-        isLabelVisible: unread > 0,
-        label: Text('$unread'),
-        backgroundColor: UC.danger,
-        child: Icon(Icons.notifications_none_rounded, color: UC.muted),
+      // Rings whenever a new notification arrives, same as the driver tab.
+      icon: IconTheme(
+        data: IconThemeData(color: UC.muted),
+        child: const AlertNavIcon(selected: false),
       ),
     );
   }

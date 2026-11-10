@@ -38,6 +38,27 @@ mixin NotificationFeed on ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes one notification from the centre (swipe to dismiss).
+  void removeNotification(AppNotification n) {
+    notifications.remove(n);
+    if (banner == n) banner = null;
+    notifyListeners();
+  }
+
+  /// Puts a dismissed notification back (undo).
+  void restoreNotification(AppNotification n) {
+    if (notifications.contains(n)) return;
+    notifications.add(n);
+    notifyListeners();
+  }
+
+  /// Clears everything the signed-in user can see.
+  void clearMyNotifications() {
+    notifications.removeWhere(visibleToViewer);
+    banner = null;
+    notifyListeners();
+  }
+
   void markAllRead() {
     for (final n in myNotifications) {
       n.read = true;

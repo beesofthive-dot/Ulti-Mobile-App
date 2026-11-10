@@ -11,9 +11,10 @@ import '../../widgets/common.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/notification_host.dart';
 
-/// Driver "Alerts" tab: every notification the driver receives, newest first.
-/// New ones slide in with a brief teal glow; unread ones are marked until the
-/// tab has been looked at for a moment.
+/// The notification centre, shared by drivers (Alerts tab) and sales
+/// attendants (bell): every notification for the signed-in user, newest
+/// first, in one single list. New ones slide in with a
+/// brief teal glow, unread ones are marked, and any can be swiped away.
 class NotificationsTab extends StatefulWidget {
   final bool active;
   const NotificationsTab({super.key, required this.active});
@@ -32,7 +33,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
     super.dispose();
   }
 
-  /// Marks everything read after the driver has had a moment to see it.
+  /// Marks everything read after the user has had a moment to see it.
   void _scheduleRead(AppState app, int unread) {
     if (!widget.active || unread == 0) {
       _readTimer?.cancel();
@@ -45,15 +46,50 @@ class _NotificationsTabState extends State<NotificationsTab> {
     });
   }
 
+  void _dismiss(AppState app, AppNotification n) {
+    app.removeNotification(n);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Notification removed'),
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => app.restoreNotification(n),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    // One feed: payments, charges, security and account events together,
-    // newest first.
     final all = app.myNotifications;
     final unread = all.where((n) => !n.read).length;
     _initial ??= all.map((n) => n.id).toSet();
     _scheduleRead(app, unread);
+    final shown = all;
+
+    // Day groups, in order, as header + tiles.
+    final rows = <Widget>[];
+    var k = 0;
+    for (final n in shown) {
+      rows.add(
+        FadeSlideIn(
+          key: ValueKey('row-${n.id}'),
+          index: math.min(k++, 8),
+          offset: 12,
+          child: Dismissible(
+            key: ValueKey(n.id),
+            direction: DismissDirection.endToStart,
+            onDismissed: (_) => _dismiss(app, n),
+            background: const _SwipeBg(),
+            child: _NoteTile(n: n, fresh: !_initial!.contains(n.id)),
+          ),
+        ),
+      );
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
@@ -66,30 +102,42 @@ class _NotificationsTabState extends State<NotificationsTab> {
               : "You're all caught up",
           icon: Icons.notifications_active_rounded,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         AnimatedSize(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
-          child: unread > 0
-              ? Align(
-                  alignment: Alignment.centerRight,
-                  child: SmallLink(
-                    'Mark all read',
-                    icon: Icons.done_all_rounded,
-                    bold: true,
-                    onTap: app.markAllRead,
+          child: all.isNotEmpty
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (unread > 0)
+                        SmallLink(
+                          'Mark all read',
+                          icon: Icons.done_all_rounded,
+                          bold: true,
+                          onTap: app.markAllRead,
+                        ),
+                      const SizedBox(width: 8),
+                      SmallLink(
+                        'Clear all',
+                        icon: Icons.delete_sweep_outlined,
+                        onTap: app.clearMyNotifications,
+                      ),
+                    ],
                   ),
                 )
               : const SizedBox(width: double.infinity),
         ),
         const SizedBox(height: 4),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: all.isEmpty
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 260),
+          switchInCurve: Curves.easeOutCubic,
+          child: shown.isEmpty
               ? Padding(
+                  key: const ValueKey('empty'),
                   padding: const EdgeInsets.only(top: 14),
                   child: Panel(
                     child: Column(
@@ -102,7 +150,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                             size: 60,
                           ),
                         ),
-                        const EmptyState(
+                        EmptyState(
                           Icons.notifications_off_outlined,
                           'No notifications yet',
                           'Payments, charges and account activity will '
@@ -113,15 +161,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
                   ),
                 )
               : Column(
+                  key: const ValueKey('list'),
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final n in all)
-                      _NoteTile(
-                        key: ValueKey(n.id),
-                        n: n,
-                        fresh: !_initial!.contains(n.id),
-                      ),
-                  ],
+                  children: rows,
                 ),
         ),
       ],
@@ -129,12 +171,29 @@ class _NotificationsTabState extends State<NotificationsTab> {
   }
 }
 
+/// Red "remove" backdrop revealed while swiping a tile.
+class _SwipeBg extends StatelessWidget {
+  const _SwipeBg();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.only(right: 22),
+    alignment: Alignment.centerRight,
+    decoration: BoxDecoration(
+      color: UC.danger.withValues(alpha: .16),
+      borderRadius: BorderRadius.circular(UC.radius),
+    ),
+    child: const Icon(Icons.delete_outline_rounded, color: UC.danger),
+  );
+}
+
 /// One notification. Slides in from the right when it arrives; a fresh one
 /// also pulses a teal glow, and an unread one keeps a teal edge and dot.
 class _NoteTile extends StatefulWidget {
   final AppNotification n;
   final bool fresh;
-  const _NoteTile({super.key, required this.n, required this.fresh});
+  const _NoteTile({required this.n, required this.fresh});
 
   @override
   State<_NoteTile> createState() => _NoteTileState();
