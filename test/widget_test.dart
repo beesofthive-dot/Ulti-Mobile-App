@@ -49,15 +49,35 @@ void main() {
     expect(find.text('Phone, email or password is incorrect.'), findsOneWidget);
   });
 
-  testWidgets('attendant goes straight to clock in at the assigned terminal', (
+  testWidgets('attendant is view-only until the shift is started', (
     tester,
   ) async {
     phone(tester);
     await start(tester);
     await signIn(tester, '020 000 0001', 'attend123');
-    expect(find.text('Assigned terminal'), findsOneWidget);
+    // Lands in the app, off shift: records only.
     expect(find.textContaining('MaxMart 37'), findsWidgets);
+    expect(find.text('Start shift'), findsWidgets);
     expect(find.textContaining('pick your branch'), findsNothing);
+    // The Record tab is locked.
+    await tester.tap(find.text('Record'));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.textContaining('You are not on shift'), findsOneWidget);
+    // Starting the shift opens the assigned terminal screen, then the app.
+    await tester.tap(find.text('Start shift').hitTestable().first);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Assigned terminal'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Start shift'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('Start shift').hitTestable().first);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Assigned terminal'), findsNothing);
+    expect(find.textContaining('You are not on shift'), findsNothing);
   });
 
   testWidgets('unassigned attendant waits for assignment', (tester) async {
@@ -160,7 +180,7 @@ void main() {
       desktop(tester);
       await start(tester);
       await signIn(tester, '020 000 0002', 'attend123');
-      expect(find.text('Assigned terminal'), findsOneWidget);
+      expect(find.text('Start shift'), findsWidgets);
       expect(tester.getSize(find.byType(Scaffold).first).width, 430);
     });
   });

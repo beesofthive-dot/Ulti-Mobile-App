@@ -17,16 +17,17 @@ class UC {
   static final ValueNotifier<bool> darkNotifier = ValueNotifier(false);
   static Color _p(int light, int darkValue) => Color(dark ? darkValue : light);
 
-  static Color get bg => _p(0xFFF5F7FA, 0xFF08162D);
-  static Color get surface => _p(0xFFFFFFFF, 0xFF102441);
-  static Color get ink => _p(0xFF0E1A2E, 0xFFF2F7FA);
-  static Color get muted => _p(0xFF6E7A8C, 0xFF9FB0C6);
-  static Color get faint => _p(0xFFA5AFBD, 0xFF6F84A0);
-  static Color get line => _p(0xFFE2E7EE, 0xFF263B58);
-  static Color get limeSoft => _p(0xFFE0FAF6, 0xFF133944);
+  // Dark mode: true black canvas, white text, soft grey cards and teal accents.
+  static Color get bg => _p(0xFFFFFFFF, 0xFF000000);
+  static Color get surface => _p(0xFFFFFFFF, 0xFF111214);
+  static Color get ink => _p(0xFF0E1A2E, 0xFFFFFFFF);
+  static Color get muted => _p(0xFF6E7A8C, 0xFFA8B0BC);
+  static Color get faint => _p(0xFFA5AFBD, 0xFF737B87);
+  static Color get line => _p(0xFFE2E7EE, 0xFF26292E);
+  static Color get limeSoft => _p(0xFFE0FAF6, 0xFF0E2A2A);
 
-  /// Headings and titles: navy on light, near-white on dark.
-  static Color get title => _p(0xFF0E2142, 0xFFF2F7FA);
+  /// Headings and titles: navy on light, white on dark.
+  static Color get title => _p(0xFF0E2142, 0xFFFFFFFF);
 
   /// Selected / active / primary-button colour: navy on light, teal on dark.
   static Color get accent => _p(0xFF0E2142, 0xFF12E8CF);
@@ -36,7 +37,7 @@ class UC {
   static Color get tealText => _p(0xFF0B8F80, 0xFF12E8CF);
 
   /// Map and canvas backdrop outside the phone column.
-  static Color get backdrop => _p(0xFFE6EBF2, 0xFF050E1E);
+  static Color get backdrop => _p(0xFFE6EBF2, 0xFF000000);
 
   static const primary = navy;
   static const primarySoft = Color(0xFF1A3159);
@@ -122,7 +123,7 @@ class UC {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: dark ? const Color(0xFF162F52) : surface,
+        backgroundColor: dark ? const Color(0xFF17191C) : surface,
         surfaceTintColor: Colors.transparent,
       ),
       dividerTheme: DividerThemeData(color: line, thickness: 1, space: 1),
@@ -166,7 +167,7 @@ class UC {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: dark ? const Color(0xFF1B3358) : navy,
+        backgroundColor: dark ? const Color(0xFF1E2126) : navy,
         contentTextStyle: const TextStyle(color: Colors.white),
         elevation: 6,
       ),

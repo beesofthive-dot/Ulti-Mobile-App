@@ -195,7 +195,7 @@ class GradientText extends StatelessWidget {
       blendMode: BlendMode.srcIn,
       shaderCallback: (r) => LinearGradient(
         colors: UC.dark
-            ? const [Color(0xFFF2F7FA), Color(0xFF66FAE9), Color(0xFF12E8CF)]
+            ? const [Color(0xFFFFFFFF), Color(0xFF66FAE9), Color(0xFF12E8CF)]
             : const [UC.navy, Color(0xFF1B5E8C), Color(0xFF0FB9A5)],
         stops: [0, .55, 1],
       ).createShader(r),

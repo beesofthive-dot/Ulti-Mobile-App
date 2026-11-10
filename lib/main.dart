@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'models.dart';
 import 'screens/attendant/attendant_shell.dart';
 import 'screens/attendant/awaiting_assignment_screen.dart';
-import 'screens/attendant/clock_in_screen.dart';
 import 'screens/driver/driver_shell.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -139,10 +138,10 @@ class RootGate extends StatelessWidget {
       null => const LoginScreen(),
       Role.driver => const DriverShell(),
       Role.attendant =>
+        // Off shift the attendant still lands in the app (view-only);
+        // starting a shift is done from the Shift tab.
         app.branch == null
             ? const AwaitingAssignmentScreen()
-            : app.shift.status == ShiftStatus.notStarted
-            ? const ClockInScreen()
             : const AttendantShell(),
     };
   }

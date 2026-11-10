@@ -43,13 +43,6 @@ class _ClockInScreenState extends State<ClockInScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(b.name),
-        actions: [
-          TextButton.icon(
-            onPressed: app.signOut,
-            icon: Icon(Icons.logout_rounded, size: 18, color: UC.muted),
-            label: Text('Log out', style: TextStyle(color: UC.muted)),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -144,7 +137,10 @@ class _ClockInScreenState extends State<ClockInScreen> {
           PrimaryButton(
             'Start shift',
             leading: Icons.login_rounded,
-            onPressed: app.clockIn,
+            onPressed: () {
+              app.clockIn();
+              Navigator.of(context).maybePop();
+            },
           ),
         ],
       ),

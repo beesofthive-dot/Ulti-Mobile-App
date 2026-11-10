@@ -10,6 +10,7 @@ import '../../widgets/motion.dart';
 import '../../widgets/notification_host.dart';
 import '../../widgets/txn_list.dart';
 import 'drivers_tab.dart';
+import 'off_shift.dart';
 import 'session_router.dart';
 import 'shift_tab.dart';
 import 'record_charge_tab.dart';
@@ -58,7 +59,12 @@ class _AttendantShellState extends State<AttendantShell>
     final app = AppScope.of(context);
     final pages = [
       TodayTab(onQuickStart: () => _startFor(null), onOpenShift: () => _go(3)),
-      RecordChargeTab(preselected: preselected, onPickDriver: () => _go(2)),
+      app.onShift
+          ? RecordChargeTab(preselected: preselected, onPickDriver: () => _go(2))
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+              children: const [OffShiftNotice()],
+            ),
       DriversTab(onStartCharge: _startFor),
       ShiftTab(onRecord: () => _go(1)),
     ];
@@ -274,15 +280,25 @@ class TodayTab extends StatelessWidget {
           action: 'Open',
           onTap: () => openSession(context, s),
         ),
-      InfoItem(
-        icon: Icons.timer_outlined,
-        color: UC.info,
-        title: 'Shift running ${run.inHours}h ${run.inMinutes % 60}m',
-        body:
-            'Started ${sh.startedAt == null ? '—' : hm(sh.startedAt!)} on ${sh.charger?.label ?? '—'}',
-        action: 'Shift',
-        onTap: onOpenShift,
-      ),
+      if (app.onShift)
+        InfoItem(
+          icon: Icons.timer_outlined,
+          color: UC.info,
+          title: 'Shift running ${run.inHours}h ${run.inMinutes % 60}m',
+          body:
+              'Started ${sh.startedAt == null ? '—' : hm(sh.startedAt!)} on ${sh.charger?.label ?? '—'}',
+          action: 'Shift',
+          onTap: onOpenShift,
+        )
+      else
+        InfoItem(
+          icon: Icons.lock_clock_outlined,
+          color: UC.warning,
+          title: 'You are off shift',
+          body: 'Records are view-only. Start your shift to record charges.',
+          action: 'Shift',
+          onTap: onOpenShift,
+        ),
       InfoItem(
         icon: Icons.payments_outlined,
         color: const Color(0xFF0FB9A5),
@@ -316,8 +332,9 @@ class TodayTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final list = app.todaySessions;
-    final active = app.activeSessions;
+    final onShift = app.onShift;
+    final list = onShift ? app.todaySessions : app.records;
+    final active = onShift ? app.activeSessions : <ChargeSession>[];
     final now = DateTime.now();
     final greet = now.hour < 12
         ? 'Good morning'
@@ -332,10 +349,13 @@ class TodayTab extends StatelessWidget {
         InfoCarousel(items: _info(context, app)),
         const SizedBox(height: 14),
         PageHeader(
-          eyebrow:
-              '${dm(now)} · Shift ${run.inHours}h ${two(run.inMinutes % 60)}m',
+          eyebrow: onShift
+              ? '${dm(now)} · Shift ${run.inHours}h ${two(run.inMinutes % 60)}m'
+              : '${dm(now)} · Off shift',
           title: '$greet, ${app.attendantName.split(' ').first}',
-          subtitle: 'Collected so far this shift',
+          subtitle: onShift
+              ? 'Collected so far this shift'
+              : 'Last shift collected',
           icon: Icons.insights_rounded,
           bottom: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,9 +392,13 @@ class TodayTab extends StatelessWidget {
                         fontSize: 15,
                       ),
                     ),
-                    onPressed: onQuickStart,
-                    icon: const Icon(Icons.bolt_rounded),
-                    label: const Text('Record a charge'),
+                    onPressed: onShift
+                        ? onQuickStart
+                        : () => startShiftFlow(context),
+                    icon: Icon(
+                      onShift ? Icons.bolt_rounded : Icons.login_rounded,
+                    ),
+                    label: Text(onShift ? 'Record a charge' : 'Start shift'),
                   ),
                 ),
               ),
@@ -445,7 +469,10 @@ class TodayTab extends StatelessWidget {
           for (var i = 0; i < active.length; i++)
             FadeSlideIn(index: i, child: _SessionRow(active[i])),
         const SizedBox(height: 26),
-        const SectionHeader('This shift', 'All sessions'),
+        SectionHeader(
+          onShift ? 'This shift' : 'Records',
+          onShift ? 'All sessions' : 'Past sessions',
+        ),
         const SizedBox(height: 12),
         if (rest.isEmpty)
           const FadeSlideIn(

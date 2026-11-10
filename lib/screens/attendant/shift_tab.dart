@@ -5,6 +5,7 @@ import '../../state.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/motion.dart';
+import 'off_shift.dart';
 import 'session_router.dart';
 
 /// AT-10 My shift: the numbers so far, charges that still need payment (they
@@ -89,6 +90,41 @@ class _ShiftTabState extends State<ShiftTab> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final sh = app.shift;
+    if (sh.startedAt == null) {
+      // No shift yet: only records are available until one is started.
+      final past = app.records;
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        children: [
+          PageHeader(
+            eyebrow: 'Shift · ${app.branch!.name}',
+            title: 'Off shift',
+            subtitle: 'Scheduled ${app.account?.shiftWindow ?? '—'}',
+            icon: Icons.schedule_rounded,
+          ),
+          const SizedBox(height: 14),
+          const OffShiftNotice(),
+          const SizedBox(height: 22),
+          const SectionHeader('Records', 'Past charges'),
+          const SizedBox(height: 10),
+          if (past.isEmpty)
+            const Panel(
+              child: EmptyState(
+                Icons.bolt_outlined,
+                'No records yet',
+                'Charges you record during a shift appear here.',
+              ),
+            )
+          else
+            for (var i = 0; i < past.length; i++)
+              FadeSlideIn(
+                key: ValueKey(past[i].id),
+                index: i,
+                child: _ChargeRow(past[i]),
+              ),
+        ],
+      );
+    }
     final list = [...app.todaySessions]
       ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
     final unpaid = _unpaid(app);
@@ -208,15 +244,23 @@ class _ShiftTabState extends State<ShiftTab> {
             controller: notes,
             maxLines: 2,
           ),
-        ] else
+        ] else ...[
           PrimaryButton(
+            'Start next shift',
+            leading: Icons.login_rounded,
+            trailing: null,
+            onPressed: () => startShiftFlow(context),
+          ),
+          const SizedBox(height: 10),
+          GhostButton(
             'Log out',
-            trailing: Icons.logout_rounded,
+            icon: Icons.logout_rounded,
             onPressed: () {
               app.resetShift();
               app.signOut();
             },
           ),
+        ],
         const SizedBox(height: 22),
         // ---- charges this shift ----
         const SectionHeader('This shift', 'Charges this shift'),
@@ -224,7 +268,9 @@ class _ShiftTabState extends State<ShiftTab> {
         Padding(
           padding: const EdgeInsets.only(left: 14, bottom: 10),
           child: Text(
-            'Tap a charge to take payment or see its receipt.',
+            submitted
+                ? 'Tap a charge to see its receipt.'
+                : 'Tap a charge to take payment or see its receipt.',
             style: TextStyle(fontSize: 12.5, color: UC.muted),
           ),
         ),

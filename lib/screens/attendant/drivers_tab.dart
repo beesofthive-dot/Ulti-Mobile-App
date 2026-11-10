@@ -58,10 +58,20 @@ class _DriversTabState extends State<DriversTab> {
           ),
         ),
         const SizedBox(height: 14),
+        if (!app.onShift) ...[
+          const InfoBanner(
+            'You are off shift. You can look drivers up, but charging and registering are locked until you start your shift.',
+            tone: Tone.warning,
+            icon: Icons.lock_clock_outlined,
+          ),
+          const SizedBox(height: 12),
+        ],
         GhostButton(
           'Register new driver',
           icon: Icons.person_add_alt_1_outlined,
-          onPressed: () async {
+          onPressed: !app.onShift
+              ? null
+              : () async {
             final d = await Navigator.of(context).push<Driver>(
               MaterialPageRoute(
                 builder: (_) => RegisterDriverScreen(prefill: q.text),
@@ -135,7 +145,9 @@ class _DriversTabState extends State<DriversTab> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: () => widget.onStartCharge(d),
+                    onPressed: app.onShift
+                        ? () => widget.onStartCharge(d)
+                        : null,
                     child: const Text('Charge'),
                   ),
                 ],

@@ -573,10 +573,24 @@ class AppState extends ChangeNotifier
   // ================= attendant: shift =================
   /// Starts the shift on the assigned terminal. The charger and opening
   /// reading come from the account; the attendant types nothing.
+  /// True only while the signed-in attendant has a shift open. Outside a
+  /// shift every operation (record, take payment, cancel, register) is blocked
+  /// and the attendant can only look at records.
+  bool get onShift =>
+      role == Role.attendant && shift.status == ShiftStatus.active;
+
+  /// Every charge this attendant has ever recorded, newest first. Read-only
+  /// history that stays visible between shifts.
+  List<ChargeSession> get records =>
+      sessions.where((s) => s.attendant == attendantName).toList()
+        ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+
   void clockIn() {
     shift
       ..status = ShiftStatus.active
       ..branch = branch
+      ..endedAt = null
+      ..notes = ''
       ..startedAt = DateTime.now()
       ..charger = assignedCharger
       ..openingReading = account?.openingReading;
